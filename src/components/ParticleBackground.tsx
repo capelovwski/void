@@ -117,5 +117,5 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({ theme })
     };
   }, [theme]);
 
-  return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none" style={{ zIndex: -10 }} />;
+  return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }} />;
 };

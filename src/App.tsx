@@ -12,6 +12,11 @@ import { PerfilTab } from './components/PerfilTab';
 import { ParticleBackground } from './components/ParticleBackground';
 import { TransactionModal } from './components/TransactionModal';
 
+import voidDarkModeLogo from '../logo/void-dark-mode.svg';
+import voidLightModeLogo from '../logo/void-light-mode.svg';
+import voidIconDarkMode from '../logo/void-icon-dark-mode.svg';
+import voidIconLightMode from '../logo/void-icon-light-mode.svg';
+
 interface AppNotification {
   id: string;
   message: string;
@@ -263,16 +268,16 @@ function App() {
     <div className="min-h-screen bg-bg-01 flex flex-col font-geist relative">
       <ParticleBackground theme={theme} />
       
-      {/* Desktop Sidebar Navigation (Apple Dynamic Style) - Centralized & Floating */}
+      <div className="relative z-10 flex flex-col flex-1 min-h-screen">
+        {/* Desktop Sidebar Navigation (Apple Dynamic Style) - Centralized & Floating */}
       <aside className="hidden desktop:flex flex-col fixed left-4 top-1/2 -translate-y-1/2 z-40 bg-neutral-00 text-neutral-11 rounded-3xl border border-neutral-03/80 shadow-2xl transition-all duration-300 ease-in-out w-18 hover:w-56 group px-3 py-6 overflow-hidden h-fit max-h-[85vh]">
         {/* Top Section / Logo Glyph */}
-        <div className="flex flex-col items-center justify-center gap-1 mb-8 flex-shrink-0">
-          <div className="w-8 h-8 rounded-xl bg-neutral-12 text-neutral-00 flex items-center justify-center font-black text-sm tracking-tighter border border-neutral-08/10">
-            V
-          </div>
-          <span className="text-[10px] font-black tracking-widest opacity-0 group-hover:opacity-100 transition-opacity duration-200 uppercase mt-1">
-            Void
-          </span>
+        <div className="flex flex-col items-center justify-center mb-8 flex-shrink-0">
+          <img 
+            src={theme === 'dark' ? voidIconDarkMode : voidIconLightMode} 
+            alt="Void Icon" 
+            className="w-8 h-8 object-contain" 
+          />
         </div>
 
         {/* Navigation Slots */}
@@ -370,14 +375,12 @@ function App() {
 
       {/* Top Header */}
       <header className="sticky top-0 z-30 bg-bg-01/80 backdrop-blur-md border-b border-neutral-03/60 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-neutral-12 text-neutral-00 flex items-center justify-center font-black text-sm tracking-tighter border border-neutral-08/10 flex-shrink-0">
-            V
-          </div>
-          <div>
-            <span className="text-lg font-black font-albert-sans text-neutral-11 tracking-tighter leading-none block">Void</span>
-            <span className="text-[9px] text-neutral-08 font-bold uppercase tracking-widest mt-0.5 block">Gestão Financeira</span>
-          </div>
+        <div className="flex items-center">
+          <img 
+            src={theme === 'dark' ? voidDarkModeLogo : voidLightModeLogo} 
+            alt="Void Logo" 
+            className="h-8 object-contain" 
+          />
         </div>
 
         <div className="flex items-center gap-4">
@@ -462,6 +465,7 @@ function App() {
             realSpends={realSpends}
             onUpdateRealSpend={handleUpdateRealSpend}
             dailyBaseSpend={dailyBaseSpend}
+            theme={theme}
           />
         )}
 
@@ -567,6 +571,7 @@ function App() {
 
         </div>
       </nav>
+      </div>
 
       {/* Transaction Entry/Edit Modal */}
       <TransactionModal
@@ -579,6 +584,10 @@ function App() {
         tags={tags}
         editingTransaction={editingTransaction}
         defaultDate={modalDefaultDate}
+        dailyBaseSpend={dailyBaseSpend}
+        realSpends={realSpends}
+        onUpdateRealSpend={handleUpdateRealSpend}
+        theme={theme}
       />
     </div>
   );

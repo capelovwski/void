@@ -10,6 +10,10 @@ interface TransactionModalProps {
   tags: Tag[];
   editingTransaction?: Transaction | null;
   defaultDate?: string;
+  dailyBaseSpend: number;
+  realSpends: Record<string, number>;
+  onUpdateRealSpend: (dateStr: string, value: number) => void;
+  theme: 'dark' | 'light';
 }
 
 export const TransactionModal: React.FC<TransactionModalProps> = ({
@@ -19,12 +23,19 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   tags,
   editingTransaction,
   defaultDate,
+  dailyBaseSpend,
+  realSpends,
+  onUpdateRealSpend,
+  theme,
 }) => {
   const [type, setType] = useState<TransactionType>('saida');
   const [value, setValue] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [date, setDate] = useState<string>('');
   const [tagId, setTagId] = useState<string>('');
+  const [realSpendInput, setRealSpendInput] = useState<string>('');
+
+  const todayStr = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
     if (editingTransaction) {
@@ -42,7 +53,48 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     }
   }, [editingTransaction, defaultDate, isOpen]);
 
+  useEffect(() => {
+    if (isOpen && date) {
+      const val = realSpends[date];
+      setRealSpendInput(val !== undefined && val !== null ? val.toString() : '');
+    }
+  }, [isOpen, date, realSpends]);
+
+  // Esc key down listener for closing
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
+
+  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  const handleRealSpendChange = (valStr: string) => {
+    setRealSpendInput(valStr);
+    const cleaned = valStr.trim();
+    let val = 0;
+    if (cleaned !== '') {
+      val = parseFloat(cleaned);
+      if (isNaN(val) || val < 0) {
+        val = 0;
+      }
+    }
+    onUpdateRealSpend(date, val);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,8 +126,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-overlay-02 animate-appear">
-      <div className="relative w-full max-w-lg bg-neutral-00 rounded-3xl border border-neutral-03 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-overlay-02 animate-appear cursor-pointer"
+      onClick={handleOverlayClick}
+    >
+      <div className="relative w-full max-w-lg bg-neutral-00 rounded-3xl border border-neutral-03 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col cursor-default">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-neutral-02 bg-neutral-01">
           <h3 className="text-xl font-semibold font-albert-sans text-neutral-11">
@@ -91,6 +146,42 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Daily Spend Limit dynamic display */}
+          <div className="p-3.5 rounded-2xl border border-neutral-03/70 bg-neutral-01 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] text-neutral-08 font-bold uppercase tracking-wider block">Meta de Gasto</span>
+              <span className="text-xs font-semibold text-neutral-10">Limite Diário Disponível</span>
+            </div>
+            <div className="text-right">
+              <span className="text-sm font-black font-albert-sans text-neutral-11">
+                R$ {dailyBaseSpend.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+          </div>
+
+          {/* Gasto Real input for past/current dates */}
+          {date && date <= todayStr && (
+            <div className="space-y-2">
+              <label htmlFor="real-spend-modal" className="text-sm font-semibold text-neutral-10 block">
+                Gasto Real do Dia (Opcional)
+              </label>
+              <div className="relative rounded-xl border border-neutral-03 overflow-hidden bg-neutral-01 focus-within:border-neutral-11 transition-colors">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-08 font-medium">R$</span>
+                <input
+                  id="real-spend-modal"
+                  type="number"
+                  step="0.01"
+                  placeholder="0,00"
+                  value={realSpendInput}
+                  onChange={(e) => handleRealSpendChange(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 bg-transparent text-sm font-semibold text-neutral-11 focus:outline-none placeholder-neutral-06"
+                />
+              </div>
+              <p className="text-[10px] text-neutral-08">
+                * Se deixado em branco, o sistema assume gasto de R$ 0,00 para este dia.
+              </p>
+            </div>
+          )}
           {/* Transaction Type Selection */}
           <div className="space-y-2">
             <label className="text-sm font-semibold text-neutral-10 block">Tipo de Movimentação</label>
@@ -218,19 +309,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           </div>
 
           {/* Footer inside Form */}
-          <div className="flex gap-3 pt-4 border-t border-neutral-02">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-3 border border-neutral-03 text-neutral-10 hover:bg-neutral-01 text-center font-medium rounded-xl transition-colors active:scale-95"
-            >
-              Cancelar
-            </button>
+          <div className="pt-4 border-t border-neutral-02">
             <button
               type="submit"
-              className="flex-1 py-3 bg-neutral-11 text-neutral-00 hover:bg-neutral-10 text-center font-medium rounded-xl shadow-sm transition-all active:scale-95"
+              className="w-full py-3 bg-neutral-11 text-neutral-00 hover:bg-neutral-10 text-center font-semibold rounded-xl shadow-sm transition-all active:scale-95 text-sm"
             >
-              Salvar Lançamento
+              Lançar Movimentação
             </button>
           </div>
         </form>

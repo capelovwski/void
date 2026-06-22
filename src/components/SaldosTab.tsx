@@ -14,6 +14,7 @@ interface SaldosTabProps {
   realSpends: Record<string, number>;
   onUpdateRealSpend: (dateStr: string, value: number) => void;
   dailyBaseSpend: number;
+  theme: 'dark' | 'light';
 }
 
 const formatCompactBalance = (val: number): string => {
@@ -43,21 +44,10 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
   realSpends,
   onUpdateRealSpend,
   dailyBaseSpend,
+  theme,
 }) => {
   const todayStr = new Date().toISOString().split('T')[0];
-  const [selectedDateStr, setSelectedDateStr] = useState<string>(todayStr);
   const [calendarView, setCalendarView] = useState<'1month' | '3months'>('1month');
-  const [isDayModalOpen, setIsDayModalOpen] = useState<boolean>(false);
-
-  // Input state for daily real spend annotation
-  const [realSpendInput, setRealSpendInput] = useState<string>(
-    (realSpends[selectedDateStr] ?? 0).toString()
-  );
-
-  // Update input when selected date changes
-  React.useEffect(() => {
-    setRealSpendInput((realSpends[selectedDateStr] ?? 0).toString());
-  }, [selectedDateStr, realSpends]);
 
   // Helper to format date strings
   const formatDateToYMD = (year: number, monthIndex: number, day: number): string => {
@@ -98,19 +88,6 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
 
   const getTagDetails = (tagId?: string) => {
     return tags.find((t) => t.id === tagId);
-  };
-
-  const handleRealSpendInputChange = (valStr: string) => {
-    setRealSpendInput(valStr);
-    const cleaned = valStr.trim();
-    let val = 0;
-    if (cleaned !== '') {
-      val = parseFloat(cleaned);
-      if (isNaN(val) || val < 0) {
-        val = 0;
-      }
-    }
-    onUpdateRealSpend(selectedDateStr, val);
   };
 
   return (
@@ -188,22 +165,35 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
               // Temporal styles: opacidade reduzida se passado, contorno sutil se hoje
               const temporalOpacity = isPast ? 'opacity-35 grayscale contrast-75 brightness-[0.8] hover:opacity-85 hover:grayscale-0 hover:contrast-100 hover:brightness-100 transition-all' : 'opacity-100';
               const presentBorder = isToday
-                ? 'ring-2 ring-main border-main bg-main/15 shadow-[0_0_12px_rgba(254,247,175,0.25)] scale-[1.01] z-10 font-bold'
+                ? (theme === 'dark'
+                  ? 'ring-2 ring-main border-main bg-main/15 shadow-[0_0_12px_rgba(254,247,175,0.25)] scale-[1.01] z-10 font-bold'
+                  : 'ring-2 ring-neutral-11 border-neutral-11 bg-neutral-02 shadow-[0_4px_12px_rgba(0,0,0,0.08)] scale-[1.01] z-10 font-bold')
                 : 'border-neutral-02/60 bg-neutral-00/30';
 
               daysList.push(
                 <button
                   key={`timeline-day-${day}`}
                   onClick={() => {
-                    setSelectedDateStr(dateStr);
-                    setIsDayModalOpen(true);
+                    onAddTransactionClick(dateStr);
                   }}
                   className={`w-full flex items-center justify-between p-3 rounded-2xl border text-left transition-all hover:border-neutral-05 ${temporalOpacity} ${presentBorder}`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`flex flex-col items-center justify-center border rounded-xl w-10 h-10 flex-shrink-0 ${isToday ? 'bg-main text-zinc-950 border-main font-black' : 'bg-neutral-01 border-neutral-03/80'}`}>
-                      <span className={`text-xs font-black ${isToday ? 'text-zinc-950' : 'text-neutral-11'}`}>{day}</span>
-                      <span className={`text-[9px] uppercase font-bold ${isToday ? 'text-zinc-800' : 'text-neutral-08'}`}>{weekdayName}</span>
+                    <div className={`flex flex-col items-center justify-center border rounded-xl w-10 h-10 flex-shrink-0 ${
+                      isToday 
+                        ? (theme === 'dark' ? 'bg-main text-zinc-950 border-main font-black' : 'bg-neutral-12 text-neutral-00 border-neutral-12 font-black') 
+                        : 'bg-neutral-01 border-neutral-03/80'
+                    }`}>
+                      <span className={`text-xs font-black ${
+                        isToday 
+                          ? (theme === 'dark' ? 'text-zinc-950' : 'text-neutral-00') 
+                          : 'text-neutral-11'
+                      }`}>{day}</span>
+                      <span className={`text-[9px] uppercase font-bold ${
+                        isToday 
+                          ? (theme === 'dark' ? 'text-zinc-800' : 'text-neutral-03') 
+                          : 'text-neutral-08'
+                      }`}>{weekdayName}</span>
                     </div>
 
                     {/* Transaction dot indicators */}
@@ -288,20 +278,27 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
               // Temporal styles: opacidade reduzida se passado, contorno sutil se hoje
               const temporalOpacity = isPast ? 'opacity-35 grayscale contrast-75 brightness-[0.8] hover:opacity-85 hover:grayscale-0 hover:contrast-100 hover:brightness-100 transition-all' : 'opacity-100';
               const presentBorder = isToday
-                ? 'ring-2 ring-main border-main bg-main/20 shadow-[0_0_15px_rgba(254,247,175,0.3)] scale-[1.03] z-10 font-bold'
+                ? (theme === 'dark'
+                  ? 'ring-2 ring-main border-main bg-main/20 shadow-[0_0_15px_rgba(254,247,175,0.3)] scale-[1.03] z-10 font-bold'
+                  : 'ring-2 ring-neutral-11 border-neutral-11 bg-neutral-02 shadow-[0_4px_12px_rgba(0,0,0,0.08)] scale-[1.03] z-10 font-bold')
                 : 'border';
 
               dayBlocks.push(
                 <button
                   key={`day-${day}`}
                   onClick={() => {
-                    setSelectedDateStr(dateStr);
-                    setIsDayModalOpen(true);
+                    onAddTransactionClick(dateStr);
                   }}
                   className={`rounded-xl flex flex-col justify-between text-left transition-all h-full min-h-16 p-2 ${heatmapClass} ${presentBorder} ${temporalOpacity}`}
                 >
                   <div className="flex items-center justify-between w-full">
-                    <span className={`text-xs font-black ${isToday ? 'bg-main text-zinc-950 w-5.5 h-5.5 rounded-full flex items-center justify-center shadow-sm' : ''}`}>
+                    <span className={`text-xs font-black ${
+                      isToday 
+                        ? (theme === 'dark' 
+                            ? 'bg-main text-zinc-950 w-5.5 h-5.5 rounded-full flex items-center justify-center shadow-sm' 
+                            : 'bg-neutral-12 text-neutral-00 w-5.5 h-5.5 rounded-full flex items-center justify-center shadow-sm') 
+                        : ''
+                    }`}>
                       {day}
                     </span>
                     
@@ -343,154 +340,6 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
               </div>
             );
           })}
-        </div>
-      )}
-
-      {/* Day Details Modal (Pop-up Popover) */}
-      {isDayModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-overlay-02 backdrop-blur-sm animate-appear">
-          <div className="relative w-full max-w-lg bg-neutral-00 rounded-3xl border border-neutral-03 shadow-2xl p-6 overflow-hidden max-h-[90vh] flex flex-col space-y-6">
-            
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-neutral-02 pb-3">
-              <div>
-                <span className="text-[10px] text-neutral-08 font-bold uppercase tracking-wider block">Horizonte de Eventos — Detalhes</span>
-                <h3 className="text-lg font-bold font-albert-sans text-neutral-11 capitalize">
-                  {new Date(selectedDateStr + 'T00:00:00').toLocaleDateString('pt-BR', {
-                    weekday: 'long',
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                  })}
-                </h3>
-              </div>
-              <button
-                onClick={() => setIsDayModalOpen(false)}
-                className="p-2 rounded-full hover:bg-neutral-02 text-neutral-10 transition-colors"
-                title="Fechar"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="flex-1 overflow-y-auto space-y-6 pr-1">
-              
-              {/* Unified Gasto Real Input / Simulado */}
-              {selectedDateStr <= todayStr ? (
-                <div className="space-y-2">
-                  <label htmlFor="real-spend-modal" className="text-sm font-semibold text-neutral-10 block">
-                    Gasto Real do Dia
-                  </label>
-                  <div className="relative rounded-xl border border-neutral-03 overflow-hidden bg-neutral-01 focus-within:border-neutral-11 transition-colors">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-08 font-semibold">R$</span>
-                    <input
-                      id="real-spend-modal"
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={realSpendInput}
-                      onChange={(e) => handleRealSpendInputChange(e.target.value)}
-                      className="w-full pl-12 pr-4 py-3 bg-transparent text-sm font-semibold text-neutral-11 focus:outline-none placeholder-neutral-06"
-                    />
-                  </div>
-                  <p className="text-[10px] text-neutral-08">
-                    * Se deixado em branco, o sistema assume gasto de R$ 0,00 para este dia.
-                  </p>
-                </div>
-              ) : (
-                <div className="p-4 rounded-xl border border-neutral-02 bg-neutral-01 text-xs text-neutral-08 leading-relaxed">
-                  <span className="font-bold text-neutral-10 block mb-1">Previsão Simulada (Dia Futuro)</span>
-                  Este é um dia futuro. O saldo projetado desconta automaticamente a previsão de gasto diário base de <strong className="text-neutral-11 font-semibold">R$ {dailyBaseSpend.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong> configurada no Planejamento.
-                </div>
-              )}
-
-              {/* Transactions List */}
-              <div className="space-y-3">
-                <span className="text-xs font-bold text-neutral-10 uppercase block">Outros Lançamentos do Dia</span>
-                
-                {selectedDateTransactions.length === 0 ? (
-                  <div className="py-8 text-center text-xs text-neutral-08 border border-dashed border-neutral-02 rounded-xl">
-                    Nenhum lançamento agendado.
-                  </div>
-                ) : (
-                  <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-                    {selectedDateTransactions.map((t) => {
-                      const tag = getTagDetails(t.tagId);
-                      
-                      const typeIcon = {
-                        entrada: <ArrowUpRight className="text-success" size={14} />,
-                        saida: <ArrowDownRight className="text-red-500" size={14} />,
-                        fatura: <CreditCard className="text-amber-500" size={14} />,
-                        economia: <PiggyBank className="text-violet-500" size={14} />,
-                      };
-
-                      return (
-                        <div
-                          key={t.id}
-                          onClick={() => {
-                            setIsDayModalOpen(false);
-                            onEditTransaction(t);
-                          }}
-                          className="flex items-center justify-between p-2.5 rounded-lg border border-neutral-02 bg-neutral-00 hover:bg-neutral-01 cursor-pointer transition-all text-xs"
-                          title="Clique para editar lançamento"
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            {typeIcon[t.type]}
-                            <span className="font-semibold text-neutral-11 truncate max-w-[150px]">
-                              {t.description}
-                            </span>
-                          </div>
-                          <div className="text-right flex items-center gap-1.5 flex-shrink-0">
-                            <span className={`font-bold ${t.type === 'entrada' ? 'text-success' : t.type === 'economia' ? 'text-violet-500 dark:text-violet-400' : 'text-neutral-11'}`}>
-                              {t.type === 'entrada' ? '+' : '-'} R$ {t.value.toLocaleString('pt-BR')}
-                            </span>
-                            {tag && (() => {
-                              const IconComponent = CATEGORY_ICONS[tag.icon as keyof typeof CATEGORY_ICONS] || Briefcase;
-                              return (
-                                <span
-                                  className="text-[10px] px-2 py-0.5 rounded-full font-medium border flex items-center gap-1 flex-shrink-0"
-                                  style={{ borderColor: tag.color + '40', backgroundColor: tag.color + '10', color: tag.color }}
-                                  title={tag.name}
-                                >
-                                  <IconComponent size={10} />
-                                  <span>{tag.name}</span>
-                                </span>
-                              );
-                            })()}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-            </div>
-
-            {/* Modal Footer Actions */}
-            <div className="flex gap-3 pt-4 border-t border-neutral-02 bg-neutral-00">
-              <button
-                type="button"
-                onClick={() => setIsDayModalOpen(false)}
-                className="flex-1 py-3 border border-neutral-03 text-neutral-10 hover:bg-neutral-01 text-center font-medium rounded-xl transition-colors active:scale-95 text-xs"
-              >
-                Fechar
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsDayModalOpen(false);
-                  onAddTransactionClick(selectedDateStr);
-                }}
-                className="flex-1 py-3 btn-filled-main text-center font-medium rounded-xl shadow-sm transition-all active:scale-95 text-xs flex items-center justify-center gap-1"
-              >
-                <Plus size={14} />
-                Lançar Movimentação
-              </button>
-            </div>
-
-          </div>
         </div>
       )}
 
