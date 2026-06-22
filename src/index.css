@@ -1,0 +1,333 @@
+@import "tailwindcss";
+
+@theme {
+  /* Custom screen breakpoints for Tailwind v4 */
+  --breakpoint-tablet: 810px;
+  --breakpoint-desktop: 1200px;
+
+  /* Custom colors matching the design system */
+  --color-main: #FEF7AF;
+  
+  --color-bg-01: var(--bg-01);
+  --color-bg-02: var(--bg-02);
+  --color-bg-03: var(--bg-03);
+  
+  --color-overlay-00: rgba(0, 0, 0, 0.40);
+  --color-overlay-01: rgba(0, 0, 0, 0.50);
+  --color-overlay-02: rgba(0, 0, 0, 0.85);
+
+  --color-neutral-00: var(--neutral-00);
+  --color-neutral-01: var(--neutral-01);
+  --color-neutral-02: var(--neutral-02);
+  --color-neutral-03: var(--neutral-03);
+  --color-neutral-04: var(--neutral-04);
+  --color-neutral-05: var(--neutral-05);
+  --color-neutral-06: var(--neutral-06);
+  --color-neutral-07: var(--neutral-07);
+  --color-neutral-08: var(--neutral-08);
+  --color-neutral-09: var(--neutral-09);
+  --color-neutral-10: var(--neutral-10);
+  --color-neutral-11: var(--neutral-11);
+  --color-neutral-12: var(--neutral-12);
+
+  --color-heatmap-high-bg: var(--color-heatmap-high-bg);
+  --color-heatmap-high-text: var(--color-heatmap-high-text);
+  --color-heatmap-high-border: var(--color-heatmap-high-border);
+
+  --color-heatmap-ok-bg: var(--color-heatmap-ok-bg);
+  --color-heatmap-ok-text: var(--color-heatmap-ok-text);
+  --color-heatmap-ok-border: var(--color-heatmap-ok-border);
+
+  --color-heatmap-warn-bg: var(--color-heatmap-warn-bg);
+  --color-heatmap-warn-text: var(--color-heatmap-warn-text);
+  --color-heatmap-warn-border: var(--color-heatmap-warn-border);
+
+  --color-heatmap-crit-bg: var(--color-heatmap-crit-bg);
+  --color-heatmap-crit-text: var(--color-heatmap-crit-text);
+  --color-heatmap-crit-border: var(--color-heatmap-crit-border);
+
+  --color-heatmap-neg-bg: var(--color-heatmap-neg-bg);
+  --color-heatmap-neg-text: var(--color-heatmap-neg-text);
+  --color-heatmap-neg-border: var(--color-heatmap-neg-border);
+
+  --color-success: #22C55E;
+  --color-star: #FBBF24;
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  /* Fonts */
+  --font-albert-sans: 'Albert Sans', sans-serif;
+  --font-geist: 'Geist', sans-serif;
+
+  /* Keyframes and animations */
+  --animate-appear: appear 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+
+  @keyframes appear {
+    0% {
+      opacity: 0;
+      transform: translateY(10px) scale(0.98);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+}
+
+:root {
+  /* Theme Color - Main (Yellowish Pastel) */
+  --theme-main: 53 97% 84%;
+
+  /* Dark Theme Variables (Default) */
+  --bg-01: #09090B; /* Zinc 950 */
+  --bg-02: #18181B; /* Zinc 900 */
+  --bg-03: #27272A; /* Zinc 800 */
+  
+  --neutral-00: #18181B; /* Card backgrounds */
+  --neutral-01: #27272A;
+  --neutral-02: #3F3F46;
+  --neutral-03: #52525B;
+  --neutral-04: #71717A;
+  --neutral-05: #8F8F9B;
+  --neutral-06: #A1A1AA;
+  --neutral-07: #B4B4BB;
+  --neutral-08: #D4D4D8;
+  --neutral-09: #E4E4E7;
+  --neutral-10: #F4F4F5;
+  --neutral-11: #FAFAFA; /* Main Text */
+  --neutral-12: #FFFFFF;
+
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+
+  --card: 240 10% 3.9%;
+  --card-foreground: 0 0% 98%;
+
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
+
+  --primary: 53 97% 84%;
+  --primary-foreground: 0 0% 10%;
+
+  --secondary: 240 3.7% 15.9%;
+  --secondary-foreground: 0 0% 98%;
+
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+
+  --accent: 240 3.7% 15.9%;
+  --accent-foreground: 0 0% 98%;
+
+  --border: 240 5.9% 15%;
+  --input: 240 5.9% 15%;
+  --ring: 53 97% 84%;
+
+  --color-heatmap-high-bg: rgba(16, 185, 129, 0.20);
+  --color-heatmap-high-text: #6EE7B7;
+  --color-heatmap-high-border: rgba(16, 185, 129, 0.30);
+
+  --color-heatmap-ok-bg: rgba(16, 185, 129, 0.10);
+  --color-heatmap-ok-text: #34D399;
+  --color-heatmap-ok-border: rgba(16, 185, 129, 0.15);
+
+  --color-heatmap-warn-bg: rgba(245, 158, 11, 0.15);
+  --color-heatmap-warn-text: #FCD34D;
+  --color-heatmap-warn-border: rgba(245, 158, 11, 0.20);
+
+  --color-heatmap-crit-bg: rgba(249, 115, 22, 0.15);
+  --color-heatmap-crit-text: #FDBA74;
+  --color-heatmap-crit-border: rgba(249, 115, 22, 0.20);
+
+  --color-heatmap-neg-bg: rgba(239, 68, 68, 0.20);
+  --color-heatmap-neg-text: #FCA5A5;
+  --color-heatmap-neg-border: rgba(239, 68, 68, 0.30);
+
+  --radius: 1rem;
+}
+
+.light {
+  /* Light Theme Variables */
+  --bg-01: #F4F2EE;
+  --bg-02: #F0ECE6;
+  --bg-03: #EDE9E6;
+  
+  --neutral-00: #FFFFFF;
+  --neutral-01: #FAFAFA;
+  --neutral-02: #F4F4F4;
+  --neutral-03: #EEEEEE;
+  --neutral-04: #E6E6E6;
+  --neutral-05: #DADADA;
+  --neutral-06: #CCCCCC;
+  --neutral-07: #BDBDBD;
+  --neutral-08: #AEAEAE;
+  --neutral-09: #999999;
+  --neutral-10: #605F5F;
+  --neutral-11: #1A1A1A;
+  --neutral-12: #000000;
+
+  --background: 40 18% 95%;
+  --foreground: 0 0% 10%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 10%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 10%;
+
+  --primary: 53 97% 84%;
+  --primary-foreground: 0 0% 10%;
+
+  --secondary: 40 18% 95%;
+  --secondary-foreground: 0 0% 10%;
+
+  --muted: 36 21% 92%;
+  --muted-foreground: 0 0% 37%;
+
+  --accent: 26 16% 91%;
+  --accent-foreground: 0 0% 10%;
+
+  --border: 0 0% 90%;
+  --input: 0 0% 90%;
+  --ring: 53 97% 84%;
+
+  --color-heatmap-high-bg: rgba(5, 150, 105, 0.15);
+  --color-heatmap-high-text: #065F46;
+  --color-heatmap-high-border: rgba(5, 150, 105, 0.20);
+
+  --color-heatmap-ok-bg: rgba(16, 185, 129, 0.08);
+  --color-heatmap-ok-text: #047857;
+  --color-heatmap-ok-border: rgba(16, 185, 129, 0.12);
+
+  --color-heatmap-warn-bg: rgba(217, 119, 6, 0.12);
+  --color-heatmap-warn-text: #78350F;
+  --color-heatmap-warn-border: rgba(217, 119, 6, 0.18);
+
+  --color-heatmap-crit-bg: rgba(234, 88, 12, 0.12);
+  --color-heatmap-crit-text: #7C2D12;
+  --color-heatmap-crit-border: rgba(234, 88, 12, 0.18);
+
+  --color-heatmap-neg-bg: rgba(220, 38, 38, 0.12);
+  --color-heatmap-neg-text: #7F1D1D;
+  --color-heatmap-neg-border: rgba(220, 38, 38, 0.18);
+}
+
+/* Custom scrollbar setup */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #E6E6E6; /* neutral-04 */
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #CCCCCC; /* neutral-06 */
+}
+
+/* Base custom resets */
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: 'Geist', sans-serif;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+  line-height: 1.4em;
+  font-weight: 400;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Albert Sans', sans-serif;
+  font-weight: 500;
+}
+
+h1, h2 {
+  letter-spacing: -0.04em;
+  line-height: 1.1em;
+}
+
+h3, h4, h5, h6 {
+  line-height: 1.3em;
+}
+
+/* Typography scale */
+h1 { font-size: 32px; }
+h2 { font-size: 26px; }
+h3 { font-size: 22px; }
+h4 { font-size: 20px; }
+h5 { font-size: 18px; }
+h6 { font-size: 16px; }
+
+@media (min-width: 810px) {
+  h1 { font-size: 42px; }
+  h2 { font-size: 32px; }
+  h3 { font-size: 26px; }
+  h4 { font-size: 22px; }
+}
+
+/* Component utilities */
+.btn-filled {
+  @apply transition-all duration-300 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 font-medium px-4 py-3 rounded-xl bg-neutral-11 text-neutral-00 hover:bg-neutral-10 shadow-sm;
+}
+
+.btn-filled-main {
+  @apply transition-all duration-300 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 font-medium px-4 py-3 rounded-xl bg-main text-zinc-950 hover:brightness-90 shadow-sm font-semibold;
+}
+
+.btn-outline {
+  @apply transition-all duration-300 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 font-medium px-4 py-3 rounded-xl border border-neutral-04 bg-neutral-00 hover:bg-neutral-01 text-neutral-11;
+}
+
+.card-premium {
+  @apply bg-neutral-00 rounded-2xl border border-neutral-03/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] p-5 transition-all duration-300;
+}
+
+/* Scroll Fade Mask Stripe-style */
+.scroll-fade-mask {
+  mask-image: linear-gradient(to bottom, transparent 0%, black 15px, black calc(100% - 15px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15px, black calc(100% - 15px), transparent 100%);
+}
+
+/* Premium Saving Progress Bar & Icon Animations */
+@keyframes progress-gradient-sweep {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-saving-progress {
+  background-size: 200% auto;
+  animation: progress-gradient-sweep 4s ease infinite;
+}
+
+@keyframes float-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+
+.animate-premium-icon {
+  animation: float-pulse 2.5s ease-in-out infinite;
+}
