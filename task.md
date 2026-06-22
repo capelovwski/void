@@ -1,0 +1,46 @@
+# Checklist de Tarefas - Void v2.0 & v2.1
+
+- [x] **Fase 1: Background de Partículas Fluidas (Canvas)**
+  - [x] Criar o componente `src/components/ParticleBackground.tsx` com renderização em canvas nativo, física de repulsão ao mouse e detecção de tema visual.
+  - [x] Instanciar o background de partículas na raiz do `App.tsx`.
+- [x] **Fase 2: Rebranding & Remoção do Painel Fixo**
+  - [x] Renomear o título da aba para **Horizonte de Eventos** no `SaldosTab.tsx`.
+  - [x] Remover o container estático inferior de "Dia Selecionado" no `SaldosTab.tsx`.
+- [x] **Fase 3: Janela de Detalhes Diários (Modal Pop-up)**
+  - [x] Adicionar estados de visibilidade do modal diário no `SaldosTab.tsx`.
+  - [x] Implementar o modal pop-up centralizado para exibição dos lançamentos, anotações de gastos reais e atalhos para lançamentos futuros.
+  - [x] Conectar os cliques das transações do modal diário com o modal principal de edição.
+- [x] **Fase 4: Lógica Temporal do Calendário (Passado, Presente, Futuro)**
+  - [x] Mapear datas passadas para renderização com opacidade reduzida e tom fosco.
+  - [x] Aplicar borda amarela de contorno sutil (`border-main`) no card correspondente ao dia de hoje.
+- [x] **Fase 5: Visão Linha do Tempo de 3 Meses**
+  - [x] Implementar visualização vertical timeline em 3 colunas (uma para cada mês) no `SaldosTab.tsx` quando a visão for de 3 meses.
+  - [x] Formatá-la com badges do heatmap de 5 cores e dots/ícones indicativos de transações.
+- [x] **Fase 6: Compilação, Testes e Sincronização**
+  - [x] Executar `npm run build` no scratch para certificar integridade sintática e tipagem do TypeScript.
+  - [x] Validar o movimento do mouse nas partículas e visualização em linha do tempo no navegador.
+  - [x] Sincronizar todos os arquivos com a pasta do workspace no Google Drive `G:`.
+
+- [x] **Fase 7: Ajustes no Horizonte de Eventos, Dia de Hoje e Partículas**
+  - [x] Ajustar layout de centralização vertical/horizontal no Horizonte de Eventos.
+  - [x] Estilizar dias passados com opacidade menor (`opacity-35`) e filtros `grayscale contrast-75 brightness-[0.8]` (e remover no hover).
+  - [x] Destacar o dia de hoje com preenchimento da marca e badge amarela (`bg-main text-zinc-950`).
+  - [x] Corrigir z-index das partículas para `-10` e densidade para 96 (aumento de 20%).
+- [x] **Fase 8: Modal de Dia Unificado (Auto-save e R$ 0)**
+  - [x] Unificar modal de dia em `SaldosTab.tsx`, removendo o botão separado "Salvar Gasto Real" e subjanelas.
+  - [x] Implementar auto-save imediato no `onChange` de gastos reais, computando R$ 0 caso limpo/vazio.
+- [x] **Fase 9: Relatórios Modulares (Multi-Bancos, Drag-and-Drop e Centrado)**
+  - [x] Implementar o widget "Custódia & Faturas Multi-Bancos" segmentando Nubank, Itaú e XP em `RelatoriosTab.tsx`.
+  - [x] Adicionar suporte a ordenação/drag-and-drop nativo no dashboard e controle de largura (redimensionamento).
+  - [x] Adicionar aba/menu retrátil de filtros dinâmicos de visibilidade dos widgets.
+  - [x] Centralizar layouts de Relatórios e Perfil na tela (`max-w-5xl mx-auto w-full`).
+- [x] **Fase 10: Categorias com Ícones SVG**
+  - [x] Atualizar a interface `Tag` em `types.ts` para suportar `icon?: string`.
+  - [x] Criar biblioteca de 10 ícones Lucide no formulário de Planejamento.
+  - [x] Redesenhar botão customizado "Custom" com o ícone de paleta moderno.
+  - [x] Substituir bolinhas coloridas por ícones pasteis coloridos nas listas e modais.
+- [x] **Fase 11: Histórico de Movimentações v2 (Extrato Tipográfico)**
+  - [x] Criar variação de componente (v2) compacta estilo extrato bancário de alta densidade no `TransacoesTab.tsx`.
+  - [x] Adicionar botão seletor de layout no cabeçalho.
+- [x] **Fase 12: Build Final e Testes**
+  - [x] Executar builds de produção no scratch e sincronizar com o workspace `g:\Meu Drive\0. WORK\4. REALTY`.
