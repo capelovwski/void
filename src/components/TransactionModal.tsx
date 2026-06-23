@@ -13,7 +13,6 @@ interface TransactionModalProps {
   dailyBaseSpend: number;
   realSpends: Record<string, number>;
   onUpdateRealSpend: (dateStr: string, value: number) => void;
-  theme: 'dark' | 'light';
 }
 
 export const TransactionModal: React.FC<TransactionModalProps> = ({
@@ -26,7 +25,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   dailyBaseSpend,
   realSpends,
   onUpdateRealSpend,
-  theme,
 }) => {
   const [type, setType] = useState<TransactionType>('saida');
   const [value, setValue] = useState<string>('');

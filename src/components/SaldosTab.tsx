@@ -1,19 +1,12 @@
 import React, { useState } from 'react';
-import { Plus, Calendar as CalendarIcon, ArrowUpRight, ArrowDownRight, CreditCard, PiggyBank, X, Briefcase } from 'lucide-react';
+import { Calendar as CalendarIcon } from 'lucide-react';
 import type { Transaction, Tag } from '../types';
-import { CATEGORY_ICONS } from './PlanejamentoTab';
 
 interface SaldosTabProps {
   transactions: Transaction[];
   tags: Tag[];
-  initialBalance: number;
-  setInitialBalance: (balance: number) => void;
   onAddTransactionClick: (date?: string) => void;
-  onEditTransaction: (transaction: Transaction) => void;
   dailyBalances: Record<string, number>;
-  realSpends: Record<string, number>;
-  onUpdateRealSpend: (dateStr: string, value: number) => void;
-  dailyBaseSpend: number;
   theme: 'dark' | 'light';
 }
 
@@ -39,11 +32,7 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
   transactions,
   tags,
   onAddTransactionClick,
-  onEditTransaction,
   dailyBalances,
-  realSpends,
-  onUpdateRealSpend,
-  dailyBaseSpend,
   theme,
 }) => {
   const todayStr = new Date().toISOString().split('T')[0];
@@ -82,9 +71,6 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
     const startDayOfWeek = firstDay.getDay(); // 0 is Sunday, 1 is Monday...
     return { totalDays, startDayOfWeek };
   };
-
-  // Selected date transactions
-  const selectedDateTransactions = transactions.filter((t) => t.date === selectedDateStr);
 
   const getTagDetails = (tagId?: string) => {
     return tags.find((t) => t.id === tagId);

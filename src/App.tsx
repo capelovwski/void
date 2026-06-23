@@ -457,14 +457,8 @@ function App() {
           <SaldosTab
             transactions={transactions}
             tags={tags}
-            initialBalance={initialBalance}
-            setInitialBalance={persistBalance}
             onAddTransactionClick={openNewTransactionModal}
-            onEditTransaction={openEditTransactionModal}
             dailyBalances={dailyBalances}
-            realSpends={realSpends}
-            onUpdateRealSpend={handleUpdateRealSpend}
-            dailyBaseSpend={dailyBaseSpend}
             theme={theme}
           />
         )}
@@ -587,7 +581,6 @@ function App() {
         dailyBaseSpend={dailyBaseSpend}
         realSpends={realSpends}
         onUpdateRealSpend={handleUpdateRealSpend}
-        theme={theme}
       />
     </div>
   );
