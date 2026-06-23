@@ -374,12 +374,8 @@ function App() {
       </aside>
 
       {/* Top Header */}
-      <header className="sticky top-0 z-30 bg-bg-01/80 backdrop-blur-md border-b border-neutral-03/60 px-6 py-4 flex items-center justify-between relative">
+      <header className="sticky top-0 z-30 bg-bg-01/80 backdrop-blur-md border-b border-neutral-03/60 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center">
-          <div className="h-10" />
-        </div>
-        
-        <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center">
           <img 
             src={theme === 'dark' ? voidDarkModeLogo : voidLightModeLogo} 
             alt="Void Logo" 
