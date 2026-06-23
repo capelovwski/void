@@ -125,8 +125,8 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
       {calendarView === '3months' ? (
         isMobile ? (
           // Visão de Linha do Tempo contínua para Mobile
-          <div className="card-premium p-4 flex flex-col space-y-4 h-full">
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1 scroll-fade-mask">
+          <div className="card-premium p-4 flex flex-col space-y-4 h-auto">
+            <div className="space-y-2 pr-1">
               {(() => {
                 const allDays: { year: number; monthIndex: number; monthName: string; day: number }[] = [];
                 monthsToRender.forEach(({ year, monthIndex, name }) => {
@@ -424,7 +424,7 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
                   
                   {/* Projected Balance Display */}
                   <div className="w-full text-right overflow-hidden border-t border-neutral-02/30 pt-1 mt-1">
-                    <span className="font-bold font-albert-sans block truncate text-[11px] tablet:text-xs text-neutral-11">
+                    <span className="font-black font-albert-sans block truncate text-xs tablet:text-sm text-neutral-11">
                       R$ {Math.round(dayBalance).toLocaleString('pt-BR')}
                     </span>
                   </div>
@@ -433,7 +433,7 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
             }
 
             return (
-              <div key={name} className="card-premium p-4 flex flex-col h-[72vh]">
+              <div key={name} className="card-premium p-4 flex flex-col h-auto desktop:h-[72vh]">
                 <h3 className="text-base font-bold font-albert-sans text-neutral-11 capitalize text-center mb-4">
                   {name}
                 </h3>

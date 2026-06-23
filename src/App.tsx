@@ -577,7 +577,7 @@ function App() {
               className={`transition-colors duration-200 ${
                 activeTab === 'saldos' 
                   ? (theme === 'dark' ? 'text-main scale-110 drop-shadow-[0_0_8px_rgba(254,247,175,0.6)]' : 'text-neutral-12 scale-110') 
-                  : 'text-neutral-08'
+                  : 'text-neutral-08 dark:text-neutral-05'
               }`} 
             />
             {activeTab === 'saldos' && (
@@ -596,7 +596,7 @@ function App() {
               className={`transition-colors duration-200 ${
                 activeTab === 'transacoes' 
                   ? (theme === 'dark' ? 'text-main scale-110 drop-shadow-[0_0_8px_rgba(254,247,175,0.6)]' : 'text-neutral-12 scale-110') 
-                  : 'text-neutral-08'
+                  : 'text-neutral-08 dark:text-neutral-05'
               }`} 
             />
             {activeTab === 'transacoes' && (
@@ -626,7 +626,7 @@ function App() {
               className={`transition-colors duration-200 ${
                 activeTab === 'relatorios' 
                   ? (theme === 'dark' ? 'text-main scale-110 drop-shadow-[0_0_8px_rgba(254,247,175,0.6)]' : 'text-neutral-12 scale-110') 
-                  : 'text-neutral-08'
+                  : 'text-neutral-08 dark:text-neutral-05'
               }`} 
             />
             {activeTab === 'relatorios' && (
@@ -645,7 +645,7 @@ function App() {
               className={`transition-colors duration-200 ${
                 activeTab === 'configuracoes' 
                   ? (theme === 'dark' ? 'text-main scale-110 drop-shadow-[0_0_8px_rgba(254,247,175,0.6)]' : 'text-neutral-12 scale-110') 
-                  : 'text-neutral-08'
+                  : 'text-neutral-08 dark:text-neutral-05'
               }`} 
             />
             {activeTab === 'configuracoes' && (

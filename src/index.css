@@ -276,6 +276,29 @@ h6 { font-size: 16px; }
   h4 { font-size: 22px; }
 }
 
+@media (max-width: 768px) {
+  /* Prevent viewport root scroll for pure app-like UI containment */
+  html, body, #root {
+    height: 100dvh;
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+  }
+
+  /* General typography scale down for mobile readability */
+  h1 { font-size: 24px; }
+  h2 { font-size: 20px; }
+  h3 { font-size: 18px; }
+  h4 { font-size: 16px; }
+  h5 { font-size: 14px; }
+  h6 { font-size: 12px; }
+  
+  body {
+    font-size: 14px;
+    line-height: 1.3em;
+  }
+}
+
 /* Component utilities */
 .btn-filled {
   @apply transition-all duration-300 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 font-medium px-4 py-3 rounded-xl bg-neutral-11 text-neutral-00 hover:bg-neutral-10 shadow-sm;
