@@ -28,3 +28,11 @@ export interface PlanningConfig {
 }
 
 export type RealSpends = Record<string, number>; // maps 'YYYY-MM-DD' -> actual spend value
+
+export interface Bank {
+  id: string;
+  name: string;
+  color: string;
+  balance: number;
+}
+

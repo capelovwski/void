@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { X, Calendar, Tag as TagIcon, FileText, Briefcase } from 'lucide-react';
 import type { Transaction, TransactionType, Tag } from '../types';
 import { CATEGORY_ICONS } from './PlanejamentoTab';
@@ -73,11 +74,43 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth <= 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
       onClose();
+    }
+  };
+
+  const overlayVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1 }
+  };
+
+  const modalVariants = {
+    hidden: { 
+      y: isMobile ? "100%" : 20,
+      scale: isMobile ? 1 : 0.95,
+      opacity: isMobile ? 1 : 0
+    },
+    visible: { 
+      y: 0,
+      scale: 1,
+      opacity: 1,
+      transition: { type: "spring", damping: 25, stiffness: 350 }
+    },
+    exit: {
+      y: isMobile ? "100%" : 20,
+      scale: isMobile ? 1 : 0.95,
+      opacity: isMobile ? 1 : 0,
+      transition: { duration: 0.2, ease: "easeIn" }
     }
   };
 
@@ -124,13 +157,31 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   ];
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-overlay-02 animate-appear cursor-pointer"
+    <motion.div 
+      className="fixed inset-0 z-50 flex items-end tablet:items-center justify-center p-0 tablet:p-4 bg-overlay-02 cursor-pointer"
       onClick={handleOverlayClick}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      variants={overlayVariants}
     >
-      <div className="relative w-full max-w-lg bg-neutral-00 rounded-3xl border border-neutral-03 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col cursor-default">
+      <motion.div 
+        className="relative w-full max-w-lg bg-neutral-00 rounded-t-3xl rounded-b-none tablet:rounded-3xl border-t tablet:border border-neutral-03 shadow-2xl overflow-hidden max-h-[92vh] tablet:max-h-[90vh] flex flex-col cursor-default"
+        variants={modalVariants}
+        drag={isMobile ? "y" : false}
+        dragConstraints={{ top: 0 }}
+        dragElastic={{ top: 0, bottom: 0.5 }}
+        onDragEnd={(event, info) => {
+          if (info.offset.y > 150) {
+            onClose();
+          }
+        }}
+      >
+        {/* Handle de arrasto no mobile */}
+        <div className="w-12 h-1 bg-neutral-03 rounded-full mx-auto my-3 block tablet:hidden flex-shrink-0" />
+
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-neutral-02 bg-neutral-01">
+        <div className="flex items-center justify-between p-6 pt-3 tablet:pt-6 border-b border-neutral-02 bg-neutral-01">
           <h3 className="text-xl font-semibold font-albert-sans text-neutral-11">
             {editingTransaction ? 'Editar Movimentação' : 'Nova Movimentação'}
           </h3>
@@ -180,6 +231,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               </p>
             </div>
           )}
+
           {/* Transaction Type Selection */}
           <div className="space-y-2">
             <label className="text-sm font-semibold text-neutral-10 block">Tipo de Movimentação</label>
@@ -316,7 +368,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Wallet, List, Plus, TrendingUp, PenLine, Bell, User } from 'lucide-react';
-import type { Transaction, Tag, PlanningConfig, RealSpends } from './types';
+import { AnimatePresence } from 'framer-motion';
+import type { Transaction, Tag, PlanningConfig, RealSpends, Bank } from './types';
 import { DEFAULT_TAGS, DEFAULT_PLANNING_CONFIG, getMockRealSpends, getMockTransactions } from './utils/mockData';
 
 // Tabs import
@@ -86,6 +87,16 @@ function App() {
   const [initialBalance, setInitialBalance] = useState<number>(2000); // balance at start of month
   const [planningConfig, setPlanningConfig] = useState<PlanningConfig>(DEFAULT_PLANNING_CONFIG);
   const [realSpends, setRealSpends] = useState<RealSpends>({});
+  const [banks, setBanks] = useState<Bank[]>([]);
+
+  const persistBanks = (newBanks: Bank[]) => {
+    setBanks(newBanks);
+    localStorage.setItem('void_banks', JSON.stringify(newBanks));
+    const newTotal = newBanks.reduce((sum, b) => sum + b.balance, 0);
+    setInitialBalance(newTotal);
+    localStorage.setItem('saldos_initial_balance', newTotal.toString());
+  };
+
 
   // 4. Modal Toggles
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -99,6 +110,7 @@ function App() {
     const savedBalance = localStorage.getItem('saldos_initial_balance');
     const savedPlanning = localStorage.getItem('saldos_planning_config');
     const savedRealSpends = localStorage.getItem('saldos_real_spends');
+    const savedBanks = localStorage.getItem('void_banks');
 
     if (savedTransactions && savedTags && savedBalance && savedPlanning && savedRealSpends) {
       setTransactions(JSON.parse(savedTransactions));
@@ -106,22 +118,41 @@ function App() {
       setInitialBalance(parseFloat(savedBalance));
       setPlanningConfig(JSON.parse(savedPlanning));
       setRealSpends(JSON.parse(savedRealSpends));
+      if (savedBanks) {
+        setBanks(JSON.parse(savedBanks));
+      } else {
+        const balVal = parseFloat(savedBalance);
+        const defaultBanks = [
+          { id: 'b1', name: 'Nubank', color: '#8A05BE', balance: Math.round(balVal * 0.4 * 100) / 100 },
+          { id: 'b2', name: 'Itaú', color: '#EC7000', balance: Math.round(balVal * 0.35 * 100) / 100 },
+          { id: 'b3', name: 'XP Investimentos', color: '#FFC000', balance: Math.round(balVal * 0.25 * 100) / 100 }
+        ];
+        setBanks(defaultBanks);
+        localStorage.setItem('void_banks', JSON.stringify(defaultBanks));
+      }
     } else {
       // Seed default mock data
       const mockTrans = getMockTransactions();
       const mockSpends = getMockRealSpends();
+      const defaultBanks = [
+        { id: 'b1', name: 'Nubank', color: '#8A05BE', balance: 800 },
+        { id: 'b2', name: 'Itaú', color: '#EC7000', balance: 700 },
+        { id: 'b3', name: 'XP Investimentos', color: '#FFC000', balance: 500 }
+      ];
       
       setTransactions(mockTrans);
       setTags(DEFAULT_TAGS);
       setInitialBalance(2000);
       setPlanningConfig(DEFAULT_PLANNING_CONFIG);
       setRealSpends(mockSpends);
+      setBanks(defaultBanks);
 
       localStorage.setItem('saldos_transactions', JSON.stringify(mockTrans));
       localStorage.setItem('saldos_tags', JSON.stringify(DEFAULT_TAGS));
       localStorage.setItem('saldos_initial_balance', '2000');
       localStorage.setItem('saldos_planning_config', JSON.stringify(DEFAULT_PLANNING_CONFIG));
       localStorage.setItem('saldos_real_spends', JSON.stringify(mockSpends));
+      localStorage.setItem('void_banks', JSON.stringify(defaultBanks));
     }
   }, []);
 
@@ -139,6 +170,28 @@ function App() {
   const persistBalance = (newBalance: number) => {
     setInitialBalance(newBalance);
     localStorage.setItem('saldos_initial_balance', newBalance.toString());
+
+    // Scale banks proportionally to match new total balance
+    if (banks.length > 0) {
+      const currentTotal = banks.reduce((sum, b) => sum + b.balance, 0);
+      const ratio = currentTotal > 0 ? newBalance / currentTotal : 0;
+      
+      const scaledBanks = banks.map((b, idx) => {
+        if (idx === banks.length - 1) {
+          // Adjust last bank to avoid rounding errors
+          const prefixSum = banks.slice(0, -1).reduce((sum, bank) => sum + Math.round(bank.balance * ratio * 100) / 100, 0);
+          return { ...b, balance: Math.max(0, Math.round((newBalance - prefixSum) * 100) / 100) };
+        }
+        return { ...b, balance: Math.round(b.balance * ratio * 100) / 100 };
+      });
+      setBanks(scaledBanks);
+      localStorage.setItem('void_banks', JSON.stringify(scaledBanks));
+    } else {
+      // If no banks, create a default cash/general bank
+      const newBanks = [{ id: 'b-general', name: 'Saldo Geral', color: '#8F8F9B', balance: newBalance }];
+      setBanks(newBanks);
+      localStorage.setItem('void_banks', JSON.stringify(newBanks));
+    }
   };
 
   const persistPlanningConfig = (newConfig: PlanningConfig) => {
@@ -265,10 +318,10 @@ function App() {
   const dailyBalances = calculateDailyBalances();
 
   return (
-    <div className="min-h-screen bg-bg-01 flex flex-col font-geist relative">
+    <div className="h-[100dvh] desktop:h-auto desktop:min-h-screen bg-bg-01 flex flex-col font-geist relative overflow-hidden desktop:overflow-visible">
       <ParticleBackground theme={theme} />
       
-      <div className="relative z-10 flex flex-col flex-1 min-h-screen">
+      <div className="relative z-10 flex flex-col flex-1 h-full desktop:h-auto overflow-hidden desktop:overflow-visible">
         {/* Desktop Sidebar Navigation (Apple Dynamic Style) - Centralized & Floating */}
       <aside className="hidden desktop:flex flex-col fixed left-4 top-1/2 -translate-y-1/2 z-40 bg-neutral-00 text-neutral-11 rounded-3xl border border-neutral-03/80 shadow-2xl transition-all duration-300 ease-in-out w-18 hover:w-56 group px-3 py-6 overflow-hidden h-fit max-h-[85vh]">
         {/* Top Section / Logo Glyph */}
@@ -374,7 +427,7 @@ function App() {
       </aside>
 
       {/* Top Header */}
-      <header className="sticky top-0 z-30 bg-bg-01/80 backdrop-blur-md border-b border-neutral-03/60 px-6 py-4 flex items-center justify-between">
+      <header className="sticky top-0 z-30 bg-bg-01/80 backdrop-blur-md border-b border-neutral-03/60 px-6 py-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center">
           <img 
             src={theme === 'dark' ? voidDarkModeLogo : voidLightModeLogo} 
@@ -452,7 +505,7 @@ function App() {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-5xl desktop:max-w-7xl w-full mx-auto px-4 tablet:px-6 py-6 desktop:pl-28">
+      <main className="flex-1 overflow-y-auto max-w-5xl desktop:max-w-7xl w-full mx-auto px-4 tablet:px-6 py-6 desktop:pl-28 pb-28 desktop:pb-6">
         {activeTab === 'saldos' && (
           <SaldosTab
             transactions={transactions}
@@ -477,6 +530,8 @@ function App() {
             transactions={transactions}
             tags={tags}
             initialBalance={initialBalance}
+            banks={banks}
+            onUpdateBanks={persistBanks}
           />
         )}
 
@@ -511,23 +566,35 @@ function App() {
           {/* Slot 1: Saldos */}
           <button
             onClick={() => setActiveTab('saldos')}
-            className={`flex flex-col items-center gap-1 transition-all ${
-              activeTab === 'saldos' ? 'text-main scale-105' : 'text-neutral-08 hover:text-neutral-01'
-            }`}
+            className="flex flex-col items-center justify-center relative py-1 focus:outline-none"
+            title="Saldos"
           >
-            <Wallet size={20} />
-            <span className="text-[10px] font-medium font-geist">Saldos</span>
+            <Wallet 
+              size={22} 
+              className={`transition-all duration-300 ${
+                activeTab === 'saldos' ? 'text-main scale-110 drop-shadow-[0_0_8px_rgba(254,247,175,0.6)]' : 'text-neutral-04 hover:text-neutral-02'
+              }`} 
+            />
+            {activeTab === 'saldos' && (
+              <span className="absolute -bottom-1.5 w-1 h-1 bg-main rounded-full" />
+            )}
           </button>
 
           {/* Slot 2: Transações */}
           <button
             onClick={() => setActiveTab('transacoes')}
-            className={`flex flex-col items-center gap-1 transition-all ${
-              activeTab === 'transacoes' ? 'text-main scale-105' : 'text-neutral-08 hover:text-neutral-01'
-            }`}
+            className="flex flex-col items-center justify-center relative py-1 focus:outline-none"
+            title="Lista"
           >
-            <List size={20} />
-            <span className="text-[10px] font-medium font-geist">Lista</span>
+            <List 
+              size={22} 
+              className={`transition-all duration-300 ${
+                activeTab === 'transacoes' ? 'text-main scale-110 drop-shadow-[0_0_8px_rgba(254,247,175,0.6)]' : 'text-neutral-04 hover:text-neutral-02'
+              }`} 
+            />
+            {activeTab === 'transacoes' && (
+              <span className="absolute -bottom-1.5 w-1 h-1 bg-main rounded-full" />
+            )}
           </button>
 
           {/* Slot 3: Highlighted Central Plus Button */}
@@ -544,23 +611,35 @@ function App() {
           {/* Slot 4: Relatórios */}
           <button
             onClick={() => setActiveTab('relatorios')}
-            className={`flex flex-col items-center gap-1 transition-all ${
-              activeTab === 'relatorios' ? 'text-main scale-105' : 'text-neutral-08 hover:text-neutral-01'
-            }`}
+            className="flex flex-col items-center justify-center relative py-1 focus:outline-none"
+            title="Relatórios"
           >
-            <TrendingUp size={20} />
-            <span className="text-[10px] font-medium font-geist">Relatórios</span>
+            <TrendingUp 
+              size={22} 
+              className={`transition-all duration-300 ${
+                activeTab === 'relatorios' ? 'text-main scale-110 drop-shadow-[0_0_8px_rgba(254,247,175,0.6)]' : 'text-neutral-04 hover:text-neutral-02'
+              }`} 
+            />
+            {activeTab === 'relatorios' && (
+              <span className="absolute -bottom-1.5 w-1 h-1 bg-main rounded-full" />
+            )}
           </button>
 
           {/* Slot 5: Planejamento */}
           <button
             onClick={() => setActiveTab('configuracoes')}
-            className={`flex flex-col items-center gap-1 transition-all ${
-              activeTab === 'configuracoes' ? 'text-main scale-105' : 'text-neutral-08 hover:text-neutral-01'
-            }`}
+            className="flex flex-col items-center justify-center relative py-1 focus:outline-none"
+            title="Planejamento"
           >
-            <PenLine size={20} />
-            <span className="text-[10px] font-medium font-geist">Planejamento</span>
+            <PenLine 
+              size={22} 
+              className={`transition-all duration-300 ${
+                activeTab === 'configuracoes' ? 'text-main scale-110 drop-shadow-[0_0_8px_rgba(254,247,175,0.6)]' : 'text-neutral-04 hover:text-neutral-02'
+              }`} 
+            />
+            {activeTab === 'configuracoes' && (
+              <span className="absolute -bottom-1.5 w-1 h-1 bg-main rounded-full" />
+            )}
           </button>
 
         </div>
@@ -568,20 +647,24 @@ function App() {
       </div>
 
       {/* Transaction Entry/Edit Modal */}
-      <TransactionModal
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setEditingTransaction(null);
-        }}
-        onSave={handleSaveTransaction}
-        tags={tags}
-        editingTransaction={editingTransaction}
-        defaultDate={modalDefaultDate}
-        dailyBaseSpend={dailyBaseSpend}
-        realSpends={realSpends}
-        onUpdateRealSpend={handleUpdateRealSpend}
-      />
+      <AnimatePresence>
+        {isModalOpen && (
+          <TransactionModal
+            isOpen={isModalOpen}
+            onClose={() => {
+              setIsModalOpen(false);
+              setEditingTransaction(null);
+            }}
+            onSave={handleSaveTransaction}
+            tags={tags}
+            editingTransaction={editingTransaction}
+            defaultDate={modalDefaultDate}
+            dailyBaseSpend={dailyBaseSpend}
+            realSpends={realSpends}
+            onUpdateRealSpend={handleUpdateRealSpend}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

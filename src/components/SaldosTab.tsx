@@ -213,11 +213,11 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
             }
 
             return (
-              <div key={name} className="card-premium p-4 flex flex-col space-y-4 h-[72vh] max-h-[72vh]">
+              <div key={name} className="card-premium p-4 flex flex-col space-y-4 desktop:h-[72vh] desktop:max-h-[72vh] h-auto">
                 <h3 className="text-base font-bold font-albert-sans text-neutral-11 capitalize text-center border-b border-neutral-02 pb-2">
                   {name}
                 </h3>
-                <div className="flex-1 overflow-y-auto space-y-2 pr-1 scroll-fade-mask">
+                <div className="flex-1 desktop:overflow-y-auto overflow-visible space-y-2 pr-1 scroll-fade-mask">
                   {daysList}
                 </div>
               </div>

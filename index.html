@@ -1,4 +1,4 @@
-<!doctype html>
+N!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
@@ -10,9 +10,27 @@
     
     <title>Saldos & Futuro | Gestão Financeira Premium</title>
     <meta name="description" content="Seu gerenciador financeiro com calendário inteligente de 3 meses para acompanhar entradas, saídas, faturas de cartão e investimentos." />
+    
+    <link rel="manifest" href="./manifest.json" />
+    <meta name="theme-color" content="#09090B" />
+    
+    <!-- Apple Mobile Web App Settings -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Void" />
+    <link rel="apple-touch-icon" href="./favicon.svg" />
   </head>
   <body class="bg-bg-01 text-neutral-11 antialiased selection:bg-main/50">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then((reg) => console.log('Service Worker registrado:', reg.scope))
+            .catch((err) => console.log('Erro Service Worker:', err));
+        });
+      }
+    </script>
   </body>
 </html>

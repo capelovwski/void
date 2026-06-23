@@ -1,21 +1,116 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ArrowUpRight, ArrowDownRight, CreditCard, PiggyBank, Target, 
-  GripVertical, SlidersHorizontal, ArrowUp, ArrowDown, Maximize2, Minimize2, Briefcase
+  GripVertical, SlidersHorizontal, ArrowUp, ArrowDown, Maximize2, Minimize2, Briefcase,
+  TrendingUp, Plus, Trash2, Edit2, X, Check
 } from 'lucide-react';
-import type { Transaction, Tag } from '../types';
+import { Reorder, useDragControls } from 'framer-motion';
+import type { Transaction, Tag, Bank } from '../types';
 import { CATEGORY_ICONS } from './PlanejamentoTab';
 
 interface RelatoriosTabProps {
   transactions: Transaction[];
   tags: Tag[];
   initialBalance: number;
+  banks: Bank[];
+  onUpdateBanks: (newBanks: Bank[]) => void;
 }
+
+interface WidgetWrapperProps {
+  id: string;
+  widgetSizes: Record<string, 'half' | 'full'>;
+  moveWidget: (id: string, direction: number) => void;
+  toggleWidgetSize: (id: string) => void;
+  renderWidgetContent: (id: string) => React.ReactNode;
+}
+
+const WidgetWrapper: React.FC<WidgetWrapperProps> = ({
+  id,
+  widgetSizes,
+  moveWidget,
+  toggleWidgetSize,
+  renderWidgetContent
+}) => {
+  const dragControls = useDragControls();
+
+  return (
+    <Reorder.Item
+      value={id}
+      dragListener={false}
+      dragControls={dragControls}
+      className="relative"
+      whileDrag={{
+        scale: 1.02,
+        rotate: [-1.2, 1.2],
+        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.35)",
+        opacity: 0.85,
+        zIndex: 50,
+        transition: {
+          rotate: {
+            repeat: Infinity,
+            repeatType: "reverse",
+            duration: 0.15,
+            ease: "easeInOut"
+          }
+        }
+      }}
+    >
+      {/* Outer drag card wrapper styling */}
+      <div className="relative group">
+        {/* Visual drag handle top-bar */}
+        <div className="absolute top-3 left-3 z-20 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div
+            onPointerDown={(e) => dragControls.start(e)}
+            className="cursor-grab active:cursor-grabbing p-1 bg-neutral-00 rounded-lg border border-neutral-03 shadow-sm text-neutral-04 hover:text-neutral-08"
+            title="Arraste para reposicionar widget"
+          >
+            <GripVertical size={14} />
+          </div>
+          
+          <div className="flex bg-neutral-00 rounded-lg border border-neutral-03 shadow-sm overflow-hidden divide-x divide-neutral-02">
+            <button
+              onClick={() => moveWidget(id, -1)}
+              className="p-1 hover:bg-neutral-01 text-neutral-06 hover:text-neutral-10"
+              title="Mover para Cima"
+            >
+              <ArrowUp size={12} />
+            </button>
+            <button
+              onClick={() => moveWidget(id, 1)}
+              className="p-1 hover:bg-neutral-01 text-neutral-06 hover:text-neutral-10"
+              title="Mover para Baixo"
+            >
+              <ArrowDown size={12} />
+            </button>
+            {id !== 'summary' && id !== 'savings_rate' && (
+              <button
+                onClick={() => toggleWidgetSize(id)}
+                className="p-1 hover:bg-neutral-01 text-neutral-06 hover:text-neutral-10"
+                title="Alternar Tamanho"
+              >
+                {widgetSizes[id] === 'full' ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Render the actual widget inside size class container */}
+        <div className={widgetSizes[id] === 'half' ? 'grid grid-cols-1 desktop:grid-cols-2 gap-6' : 'w-full'}>
+          <div className={widgetSizes[id] === 'half' ? 'desktop:col-span-1' : 'w-full'}>
+            {renderWidgetContent(id)}
+          </div>
+        </div>
+      </div>
+    </Reorder.Item>
+  );
+};
 
 export const RelatoriosTab: React.FC<RelatoriosTabProps> = ({
   transactions,
   tags,
   initialBalance,
+  banks,
+  onUpdateBanks,
 }) => {
   // 1. Core Financial Calculations
   const sumByType = (type: Transaction['type']) => {
@@ -134,28 +229,73 @@ export const RelatoriosTab: React.FC<RelatoriosTabProps> = ({
   const linePath = pointsList.length > 0 ? `M ${pointsList[0].replace(',', ' ')} L ` + pointsList.slice(1).map(p => p.replace(',', ' ')).join(' L ') : '';
   const areaPath = pointsList.length > 0 ? `${linePath} L ${svgWidth - paddingX} ${svgHeight - paddingY} L ${paddingX} ${svgHeight - paddingY} Z` : '';
 
-  // 4. Multi-Bank Segmentation Data Model
-  const bankData = {
-    nubank: {
-      name: 'Nubank',
-      color: '#8A05BE',
-      fatura: totalFaturas * 0.6,
-      investimentos: totalEconomias * 0.3,
-      saldo: (initialBalance + totalEntradas - totalDespesas) * 0.4,
-    },
-    itau: {
-      name: 'Itaú Unibanco',
-      color: '#EC7000',
-      fatura: totalFaturas * 0.4,
-      investimentos: totalEconomias * 0.2,
-      saldo: (initialBalance + totalEntradas - totalDespesas) * 0.35,
-    },
-    xp: {
-      name: 'XP Investimentos',
-      color: '#FFC000',
-      fatura: 0,
-      investimentos: totalEconomias * 0.5,
-      saldo: (initialBalance + totalEntradas - totalDespesas) * 0.25,
+  // 4. Bank Management States and Helpers
+  const [isBankModalOpen, setIsBankModalOpen] = useState(false);
+  const [editingBank, setEditingBank] = useState<Bank | null>(null);
+  const [bankName, setBankName] = useState('');
+  const [bankColor, setBankColor] = useState('#8A05BE');
+  const [bankBalance, setBankBalance] = useState('');
+
+  const COLOR_PRESETS = [
+    '#8A05BE', // Nubank Purple
+    '#EC7000', // Itaú Orange
+    '#FFC000', // XP Gold
+    '#0070F3', // Vibrant Blue
+    '#10B981', // Emerald Green
+    '#EF4444', // Vibrant Red
+    '#EC4899', // Hot Pink
+    '#06B6D4', // Cyan
+  ];
+
+  const handleSaveBank = () => {
+    if (!bankName.trim()) return;
+    const parsedBalance = parseFloat(bankBalance) || 0;
+
+    let updatedBanks: Bank[];
+    if (editingBank) {
+      updatedBanks = banks.map((b) =>
+        b.id === editingBank.id
+          ? { ...b, name: bankName, color: bankColor, balance: parsedBalance }
+          : b
+      );
+    } else {
+      const newBank: Bank = {
+        id: `bank-${Date.now()}`,
+        name: bankName,
+        color: bankColor,
+        balance: parsedBalance
+      };
+      updatedBanks = [...banks, newBank];
+    }
+
+    onUpdateBanks(updatedBanks);
+    
+    // Reset Form
+    setBankName('');
+    setBankColor(COLOR_PRESETS[0]);
+    setBankBalance('');
+    setEditingBank(null);
+  };
+
+  const handleStartEditBank = (bank: Bank) => {
+    setEditingBank(bank);
+    setBankName(bank.name);
+    setBankColor(bank.color);
+    setBankBalance(bank.balance.toString());
+  };
+
+  const handleCancelEdit = () => {
+    setEditingBank(null);
+    setBankName('');
+    setBankColor(COLOR_PRESETS[0]);
+    setBankBalance('');
+  };
+
+  const handleDeleteBank = (id: string) => {
+    const updatedBanks = banks.filter((b) => b.id !== id);
+    onUpdateBanks(updatedBanks);
+    if (editingBank?.id === id) {
+      handleCancelEdit();
     }
   };
 
@@ -488,39 +628,73 @@ export const RelatoriosTab: React.FC<RelatoriosTabProps> = ({
       case 'multi_banks':
         return (
           <div className="card-premium p-6 space-y-4 flex flex-col h-full">
-            <h3 className="text-base font-bold font-albert-sans text-neutral-11">
-              Custódia & Faturas Multi-Bancos
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold font-albert-sans text-neutral-11">
+                Custódia & Faturas Multi-Bancos
+              </h3>
+              
+              <button
+                onClick={() => {
+                  setBankName('');
+                  setBankColor(COLOR_PRESETS[0]);
+                  setBankBalance('');
+                  setEditingBank(null);
+                  setIsBankModalOpen(true);
+                }}
+                className="btn-outline px-3 py-1.5 text-[10px] font-bold flex items-center gap-1.5"
+              >
+                <Plus size={10} />
+                <span>Gerenciar Bancos</span>
+              </button>
+            </div>
 
             <div className="grid grid-cols-1 tablet:grid-cols-3 gap-4">
-              {Object.entries(bankData).map(([key, bank]) => (
-                <div key={key} className="p-4 rounded-xl border border-neutral-02 bg-neutral-01/30 space-y-3 relative overflow-hidden transition-all hover:border-neutral-04">
-                  <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ backgroundColor: bank.color }} />
-                  
-                  <div className="flex items-center justify-between border-b border-neutral-02/60 pb-2">
-                    <span className="text-xs font-bold font-albert-sans text-neutral-11 flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: bank.color }} />
-                      {bank.name}
-                    </span>
+              {banks.map((bank) => {
+                const totalBankBalances = banks.reduce((sum, b) => sum + b.balance, 0) || 1;
+                const bankFatura = totalFaturas * (bank.balance / totalBankBalances);
+                const bankInvestimentos = totalEconomias * (bank.balance / totalBankBalances);
+                
+                return (
+                  <div key={bank.id} className="p-4 rounded-xl border border-neutral-02 bg-neutral-01/30 space-y-3 relative overflow-hidden transition-all hover:border-neutral-04">
+                    <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ backgroundColor: bank.color }} />
+                    
+                    <div className="flex items-center justify-between border-b border-neutral-02/60 pb-2">
+                      <span className="text-xs font-bold font-albert-sans text-neutral-11 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: bank.color }} />
+                        {bank.name}
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-2 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-neutral-08">Fatura Cartão:</span>
+                        <span className="font-semibold text-neutral-11">
+                          R$ {bankFatura.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-neutral-08">Investimentos:</span>
+                        <span className="font-semibold text-violet-500 dark:text-violet-400">
+                          R$ {bankInvestimentos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between border-t border-neutral-02/30 pt-1.5">
+                        <span className="text-neutral-08 font-medium">Saldo Líquido:</span>
+                        <span className="font-bold text-success">
+                          R$ {bank.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  
-                  <div className="space-y-2 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-neutral-08">Fatura Cartão:</span>
-                      <span className="font-semibold text-neutral-11">R$ {bank.fatura.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-neutral-08">Investimentos:</span>
-                      <span className="font-semibold text-violet-500 dark:text-violet-400">R$ {bank.investimentos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                    <div className="flex justify-between border-t border-neutral-02/30 pt-1.5">
-                      <span className="text-neutral-08 font-medium">Saldo Líquido:</span>
-                      <span className="font-bold text-success">R$ {bank.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
+            
+            {banks.length === 0 && (
+              <p className="text-xs text-neutral-08 text-center py-6">
+                Nenhuma instituição cadastrada. Clique em \"Gerenciar Bancos\" para iniciar.
+              </p>
+            )}
           </div>
         );
 
@@ -535,8 +709,9 @@ export const RelatoriosTab: React.FC<RelatoriosTabProps> = ({
       {/* Header Controls */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold font-albert-sans text-neutral-11">
-            Painel Analítico
+          <h2 className="text-lg font-bold font-albert-sans text-neutral-11 flex items-center gap-2">
+            <TrendingUp size={20} className="text-neutral-08" />
+            <span>Painel Analítico</span>
           </h2>
           <p className="text-[11px] text-neutral-08">Consulte suas faturas, investimentos e taxas com widgets modulares customizáveis.</p>
         </div>
@@ -573,71 +748,170 @@ export const RelatoriosTab: React.FC<RelatoriosTabProps> = ({
         </div>
       )}
 
-      {/* Main Drag-and-Drop Customizable Grid */}
-      <div className="flex flex-col gap-6">
+      {/* Main Drag-and-Drop Customizable Grid with Framer Motion */}
+      <Reorder.Group
+        axis="y"
+        values={widgetOrder}
+        onReorder={setWidgetOrder}
+        className="flex flex-col gap-6"
+      >
         {widgetOrder.map((id) => {
           if (!visibleWidgets[id]) return null;
 
-
-
           return (
-            <div
+            <WidgetWrapper
               key={id}
-              className={`transition-all duration-300 relative group`}
-              onDragOver={handleDragOver}
-              onDrop={(e) => handleDrop(e, id)}
-            >
-              {/* Outer drag card wrapper styling */}
-              <div className="relative">
-                {/* Visual drag handle top-bar */}
-                <div className="absolute top-3 left-3 z-20 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <div
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, id)}
-                    className="cursor-grab active:cursor-grabbing p-1 bg-neutral-00 rounded-lg border border-neutral-03 shadow-sm text-neutral-04 hover:text-neutral-08"
-                    title="Arraste para reposicionar widget"
-                  >
-                    <GripVertical size={14} />
-                  </div>
-                  
-                  <div className="flex bg-neutral-00 rounded-lg border border-neutral-03 shadow-sm overflow-hidden divide-x divide-neutral-02">
-                    <button
-                      onClick={() => moveWidget(id, -1)}
-                      className="p-1 hover:bg-neutral-01 text-neutral-06 hover:text-neutral-10"
-                      title="Mover para Cima"
-                    >
-                      <ArrowUp size={12} />
-                    </button>
-                    <button
-                      onClick={() => moveWidget(id, 1)}
-                      className="p-1 hover:bg-neutral-01 text-neutral-06 hover:text-neutral-10"
-                      title="Mover para Baixo"
-                    >
-                      <ArrowDown size={12} />
-                    </button>
-                    {id !== 'summary' && id !== 'savings_rate' && (
-                      <button
-                        onClick={() => toggleWidgetSize(id)}
-                        className="p-1 hover:bg-neutral-01 text-neutral-06 hover:text-neutral-10"
-                        title="Alternar Tamanho"
-                      >
-                        {widgetSizes[id] === 'full' ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Render the actual widget inside size class container */}
-                <div className={widgetSizes[id] === 'half' ? 'grid grid-cols-1 desktop:grid-cols-2 gap-6' : 'w-full'}>
-                  <div className={widgetSizes[id] === 'half' ? 'desktop:col-span-1' : 'w-full'}>
-                    {renderWidgetContent(id)}
-                  </div>
-                </div>
-              </div>
-            </div>
+              id={id}
+              widgetSizes={widgetSizes}
+              moveWidget={moveWidget}
+              toggleWidgetSize={toggleWidgetSize}
+              renderWidgetContent={renderWidgetContent}
+            />
           );
         })}
-      </div>
+      </Reorder.Group>
+
+      {/* Modal de Gerenciamento de Bancos */}
+      {isBankModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-appear">
+          <div className="bg-neutral-00 rounded-3xl border border-neutral-03/80 shadow-2xl p-6 w-full max-w-lg flex flex-col max-h-[85vh] cursor-default">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-neutral-02 pb-3 mb-4">
+              <h3 className="text-base font-bold text-neutral-11 flex items-center gap-2">
+                <PiggyBank size={18} className="text-neutral-08" />
+                <span>Gerenciar Bancos e Saldos</span>
+              </h3>
+              <button
+                onClick={() => {
+                  setIsBankModalOpen(false);
+                  setEditingBank(null);
+                }}
+                className="text-neutral-08 hover:text-neutral-11 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Scrollable list of existing banks */}
+            <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-1">
+              {banks.map((bank) => (
+                <div key={bank.id} className="flex items-center justify-between p-3 rounded-2xl border border-neutral-02 bg-neutral-01/30">
+                  <div className="flex items-center gap-3">
+                    <span className="w-3.5 h-3.5 rounded-full border border-black/10 flex-shrink-0" style={{ backgroundColor: bank.color }} />
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold text-neutral-11">{bank.name}</span>
+                      <span className="text-[10px] text-neutral-08">
+                        Saldo: R$ {bank.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleStartEditBank(bank)}
+                      className="p-1.5 rounded-lg border border-neutral-03/60 text-neutral-08 hover:text-neutral-11 hover:bg-neutral-02 transition-all"
+                      title="Editar Banco"
+                    >
+                      <Edit2 size={12} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteBank(bank.id)}
+                      className="p-1.5 rounded-lg border border-neutral-03/60 text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
+                      title="Excluir Banco"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {banks.length === 0 && (
+                <p className="text-xs text-neutral-08 text-center py-4">Nenhum banco cadastrado. Adicione um abaixo!</p>
+              )}
+            </div>
+
+            {/* Form to Add/Edit Bank */}
+            <div className="border-t border-neutral-02 pt-4 space-y-4">
+              <h4 className="text-xs font-bold text-neutral-10 uppercase tracking-wider">
+                {editingBank ? 'Editar Banco' : 'Adicionar Novo Banco'}
+              </h4>
+              
+              <div className="grid grid-cols-1 tablet:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] text-neutral-08 font-bold block mb-1">Nome do Banco</label>
+                  <input
+                    type="text"
+                    value={bankName}
+                    onChange={(e) => setBankName(e.target.value)}
+                    placeholder="Ex: Nubank, Itaú..."
+                    className="w-full bg-neutral-01 border border-neutral-02 hover:border-neutral-03 focus:border-neutral-11 rounded-xl px-3 py-2 text-xs text-neutral-11 outline-none transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-neutral-08 font-bold block mb-1">Saldo Atual (R$)</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={bankBalance}
+                    onChange={(e) => setBankBalance(e.target.value)}
+                    placeholder="0,00"
+                    className="w-full bg-neutral-01 border border-neutral-02 hover:border-neutral-03 focus:border-neutral-11 rounded-xl px-3 py-2 text-xs text-neutral-11 outline-none transition-colors"
+                  />
+                </div>
+              </div>
+
+              {/* Color Identity Selector */}
+              <div>
+                <label className="text-[10px] text-neutral-08 font-bold block mb-1.5">Cor de Identidade</label>
+                <div className="flex flex-wrap items-center gap-2">
+                  {COLOR_PRESETS.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setBankColor(color)}
+                      className={`w-7 h-7 rounded-full border transition-all ${
+                        bankColor === color 
+                          ? 'ring-2 ring-neutral-11 scale-110 border-white' 
+                          : 'border-black/10 hover:scale-105'
+                      }`}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                  
+                  {/* Custom Color Picker Button */}
+                  <label className="relative cursor-pointer flex items-center justify-center w-7 h-7 rounded-full border border-neutral-03 hover:scale-105 transition-all bg-neutral-01">
+                    <span className="text-[9px] text-neutral-08 font-bold">Custom</span>
+                    <input
+                      type="color"
+                      value={bankColor}
+                      onChange={(e) => setBankColor(e.target.value)}
+                      className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* Actions for Form */}
+              <div className="flex items-center justify-end gap-3 pt-2">
+                {editingBank && (
+                  <button
+                    onClick={() => handleCancelEdit()}
+                    className="btn-outline px-4 py-2 text-xs font-semibold"
+                  >
+                    Cancelar
+                  </button>
+                )}
+                <button
+                  onClick={() => handleSaveBank()}
+                  disabled={!bankName.trim()}
+                  className="btn-filled-main px-4 py-2 text-xs font-semibold disabled:opacity-50"
+                >
+                  {editingBank ? 'Atualizar Banco' : 'Adicionar Banco'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
