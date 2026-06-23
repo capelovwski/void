@@ -272,11 +272,11 @@ function App() {
         {/* Desktop Sidebar Navigation (Apple Dynamic Style) - Centralized & Floating */}
       <aside className="hidden desktop:flex flex-col fixed left-4 top-1/2 -translate-y-1/2 z-40 bg-neutral-00 text-neutral-11 rounded-3xl border border-neutral-03/80 shadow-2xl transition-all duration-300 ease-in-out w-18 hover:w-56 group px-3 py-6 overflow-hidden h-fit max-h-[85vh]">
         {/* Top Section / Logo Glyph */}
-        <div className="flex flex-col items-center justify-center mb-8 flex-shrink-0">
+        <div className="flex items-center justify-center group-hover:justify-start mb-8 flex-shrink-0 w-full group-hover:pl-4 transition-all duration-300">
           <img 
             src={theme === 'dark' ? voidIconDarkMode : voidIconLightMode} 
             alt="Void Icon" 
-            className="w-8 h-8 object-contain" 
+            className="w-11 h-11 object-contain transition-all duration-300 group-hover:scale-110" 
           />
         </div>
 
@@ -374,12 +374,16 @@ function App() {
       </aside>
 
       {/* Top Header */}
-      <header className="sticky top-0 z-30 bg-bg-01/80 backdrop-blur-md border-b border-neutral-03/60 px-6 py-4 flex items-center justify-between">
+      <header className="sticky top-0 z-30 bg-bg-01/80 backdrop-blur-md border-b border-neutral-03/60 px-6 py-4 flex items-center justify-between relative">
         <div className="flex items-center">
+          <div className="h-10" />
+        </div>
+        
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center">
           <img 
             src={theme === 'dark' ? voidDarkModeLogo : voidLightModeLogo} 
             alt="Void Logo" 
-            className="h-8 object-contain" 
+            className="h-12 w-auto object-contain transition-transform duration-300 hover:scale-105" 
           />
         </div>
 
