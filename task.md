@@ -44,3 +44,10 @@
   - [x] Adicionar botão seletor de layout no cabeçalho.
 - [x] **Fase 12: Build Final e Testes**
   - [x] Executar builds de produção no scratch e sincronizar com o workspace `g:\Meu Drive\0. WORK\4. REALTY`.
+
+- [x] **Fase 13: Ajustes no Menu Mobile**
+  - [x] Sincronizar cores e estilos do menu mobile com o menu desktop (background `bg-neutral-00/95`, active `bg-neutral-12 text-neutral-00`, inactive `text-neutral-08`).
+  - [x] Aumentar os ícones do menu mobile para `size={20}` para melhor legibilidade.
+  - [x] Estilizar o botão `+` como um squircle centralizado com `rounded-[20px]` e borda combinando com o desktop.
+  - [x] Atualizar a versão do cache do Service Worker para `void-cache-v4` e adicionar `reg.update()` no index.html para garantir a invalidação imediata do cache do usuário.
+

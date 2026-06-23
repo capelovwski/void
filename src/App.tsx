@@ -560,97 +560,79 @@ function App() {
         )}
       </main>
 
-      {/* Navigation Footer (Solid Bottom Navigation Bar) */}
-      <nav 
-        className="fixed bottom-0 left-0 right-0 z-40 bg-neutral-00/95 backdrop-blur-md border-t border-neutral-03/60 px-4 desktop:hidden"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 8px)', paddingTop: '8px' }}
-      >
-        <div className="max-w-lg mx-auto flex items-center justify-between h-14 relative">
+      {/* Navigation Footer (Floating Navigation Menu - Desktop Style) */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 px-4 pb-6 pt-2 bg-gradient-to-t from-bg-01 via-bg-01 to-transparent desktop:hidden">
+        <div className="max-w-md mx-auto bg-neutral-00/95 backdrop-blur-md text-neutral-11 rounded-3xl border border-neutral-03/80 shadow-2xl flex items-center justify-around py-2 px-3 relative">
+          
           {/* Slot 1: Saldos */}
           <button
             onClick={() => setActiveTab('saldos')}
-            className="w-12 h-12 flex flex-col items-center justify-center relative focus:outline-none"
+            className={`px-2.5 py-1.5 rounded-2xl flex flex-col items-center justify-center transition-all ${
+              activeTab === 'saldos'
+                ? 'bg-neutral-12 text-neutral-00 shadow-sm'
+                : 'text-neutral-08 dark:text-neutral-05 hover:text-neutral-11'
+            }`}
+            style={{ minWidth: '64px', minHeight: '48px' }}
             title="Saldos"
           >
-            <Wallet 
-              size={22} 
-              className={`transition-colors duration-200 ${
-                activeTab === 'saldos' 
-                  ? (theme === 'dark' ? 'text-main scale-110 drop-shadow-[0_0_8px_rgba(254,247,175,0.6)]' : 'text-neutral-12 scale-110') 
-                  : 'text-neutral-08 dark:text-neutral-05'
-              }`} 
-            />
-            {activeTab === 'saldos' && (
-              <span className={`absolute bottom-0.5 w-1.5 h-1.5 rounded-full ${theme === 'dark' ? 'bg-main' : 'bg-neutral-12'}`} />
-            )}
+            <Wallet size={20} />
+            <span className="text-[9px] font-bold mt-0.5">Saldos</span>
           </button>
  
           {/* Slot 2: Transações */}
           <button
             onClick={() => setActiveTab('transacoes')}
-            className="w-12 h-12 flex flex-col items-center justify-center relative focus:outline-none"
+            className={`px-2.5 py-1.5 rounded-2xl flex flex-col items-center justify-center transition-all ${
+              activeTab === 'transacoes'
+                ? 'bg-neutral-12 text-neutral-00 shadow-sm'
+                : 'text-neutral-08 dark:text-neutral-05 hover:text-neutral-11'
+            }`}
+            style={{ minWidth: '64px', minHeight: '48px' }}
             title="Lista"
           >
-            <List 
-              size={22} 
-              className={`transition-colors duration-200 ${
-                activeTab === 'transacoes' 
-                  ? (theme === 'dark' ? 'text-main scale-110 drop-shadow-[0_0_8px_rgba(254,247,175,0.6)]' : 'text-neutral-12 scale-110') 
-                  : 'text-neutral-08 dark:text-neutral-05'
-              }`} 
-            />
-            {activeTab === 'transacoes' && (
-              <span className={`absolute bottom-0.5 w-1.5 h-1.5 rounded-full ${theme === 'dark' ? 'bg-main' : 'bg-neutral-12'}`} />
-            )}
+            <List size={20} />
+            <span className="text-[9px] font-bold mt-0.5">Lista</span>
           </button>
  
-          {/* Slot 3: Highlighted Central Plus Button */}
-          <div className="relative w-14 h-14 flex items-center justify-center flex-shrink-0">
+          {/* Slot 3: Highlighted Central Plus Button (Desktop Squircle Style & Centered) */}
+          <div className="flex items-center justify-center flex-shrink-0">
             <button
               onClick={() => openNewTransactionModal()}
-              className="absolute top-[-20px] bg-main text-zinc-950 w-14 h-14 rounded-full border-4 border-neutral-00 flex items-center justify-center shadow-lg transition-transform active:scale-95"
+              className="bg-main text-zinc-950 w-12 h-12 rounded-[20px] border border-neutral-04/55 shadow-md hover:shadow-main/20 flex items-center justify-center active:scale-95 transition-all duration-300 hover:scale-[1.06]"
               title="Nova Movimentação"
             >
-              <Plus size={28} strokeWidth={2.5} />
+              <Plus size={20} className="flex-shrink-0" />
             </button>
           </div>
  
           {/* Slot 4: Relatórios */}
           <button
             onClick={() => setActiveTab('relatorios')}
-            className="w-12 h-12 flex flex-col items-center justify-center relative focus:outline-none"
+            className={`px-2.5 py-1.5 rounded-2xl flex flex-col items-center justify-center transition-all ${
+              activeTab === 'relatorios'
+                ? 'bg-neutral-12 text-neutral-00 shadow-sm'
+                : 'text-neutral-08 dark:text-neutral-05 hover:text-neutral-11'
+            }`}
+            style={{ minWidth: '64px', minHeight: '48px' }}
             title="Relatórios"
           >
-            <TrendingUp 
-              size={22} 
-              className={`transition-colors duration-200 ${
-                activeTab === 'relatorios' 
-                  ? (theme === 'dark' ? 'text-main scale-110 drop-shadow-[0_0_8px_rgba(254,247,175,0.6)]' : 'text-neutral-12 scale-110') 
-                  : 'text-neutral-08 dark:text-neutral-05'
-              }`} 
-            />
-            {activeTab === 'relatorios' && (
-              <span className={`absolute bottom-0.5 w-1.5 h-1.5 rounded-full ${theme === 'dark' ? 'bg-main' : 'bg-neutral-12'}`} />
-            )}
+            <TrendingUp size={20} />
+            <span className="text-[9px] font-bold mt-0.5">Relatórios</span>
           </button>
  
           {/* Slot 5: Planejamento */}
           <button
             onClick={() => setActiveTab('configuracoes')}
-            className="w-12 h-12 flex flex-col items-center justify-center relative focus:outline-none"
+            className={`px-2.5 py-1.5 rounded-2xl flex flex-col items-center justify-center transition-all ${
+              activeTab === 'configuracoes'
+                ? 'bg-neutral-12 text-neutral-00 shadow-sm'
+                : 'text-neutral-08 dark:text-neutral-05 hover:text-neutral-11'
+            }`}
+            style={{ minWidth: '64px', minHeight: '48px' }}
             title="Planejamento"
           >
-            <PenLine 
-              size={22} 
-              className={`transition-colors duration-200 ${
-                activeTab === 'configuracoes' 
-                  ? (theme === 'dark' ? 'text-main scale-110 drop-shadow-[0_0_8px_rgba(254,247,175,0.6)]' : 'text-neutral-12 scale-110') 
-                  : 'text-neutral-08 dark:text-neutral-05'
-              }`} 
-            />
-            {activeTab === 'configuracoes' && (
-              <span className={`absolute bottom-0.5 w-1.5 h-1.5 rounded-full ${theme === 'dark' ? 'bg-main' : 'bg-neutral-12'}`} />
-            )}
+            <PenLine size={20} />
+            <span className="text-[9px] font-bold mt-0.5">Planejamento</span>
           </button>
         </div>
       </nav>

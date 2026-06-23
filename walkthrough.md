@@ -45,3 +45,11 @@ Esta refatoração aprimorou a consistência de marca, simplificou os fluxos de 
 - Gravamos a sessão de verificação no navegador: [verify_deploy_and_site_1782173410688.webp](file:///C:/Users/fws_c/.gemini/antigravity-ide/brain/9db04b00-ca6d-49d0-805f-f0d535ae618a/verify_deploy_and_site_1782173410688.webp)
 - Visualização da interface principal do dashboard ativo:
   ![Dashboard Inicial](file:///C:/Users/fws_c/.gemini/antigravity-ide/brain/9db04b00-ca6d-49d0-805f-f0d535ae618a/deployed_site_home_1782173554357.png)
+
+### 7. Refinamento Visual do Menu Mobile
+- **Sincronia de Cores:** Ajustado o container do menu mobile para usar o mesmo fundo e comportamento de tema que o menu desktop (`bg-neutral-00/95` com `backdrop-blur-md` e borda `border-neutral-03/80`).
+- **Estados Ativo/Inativo:** Os botões ativos utilizam o preenchimento dinâmico de tema `bg-neutral-12` (branco no modo escuro, preto no modo claro) com ícone em `text-neutral-00`. Os inativos utilizam `text-neutral-08` / `dark:text-neutral-05`, exatamente igual ao menu desktop.
+- **Tamanho dos Ícones:** O tamanho dos ícones no mobile foi elevado de `18` para `20` para coincidir com a escala visual do menu desktop.
+- **Botão "+" Centralizado:** Redesenhado o botão de lançar no mobile com formato squircle (`rounded-[20px]`), contorno `border-neutral-04/55` e tamanho `w-12 h-12`. Ele foi perfeitamente centralizado verticalmente no centro da barra junto aos demais slots (Saldos & Lista à esquerda, Relatórios & Planejamento à direita), sem ficar deslocado para cima.
+- **Evitar Caching no Aparelho:** Aumentada a versão do Service Worker para `void-cache-v4` e adicionado `reg.update()` imediato na inicialização do script no `index.html`. Isso força os smartphones e navegadores locais a carregarem o novo layout corrigido na hora, sem a necessidade de limpeza manual de cache de PWA.
+
