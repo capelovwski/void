@@ -37,6 +37,14 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
 }) => {
   const todayStr = new Date().toISOString().split('T')[0];
   const [calendarView, setCalendarView] = useState<'1month' | '3months'>('1month');
+  const [isMobile, setIsMobile] = useState(false);
+
+  React.useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Helper to format date strings
   const formatDateToYMD = (year: number, monthIndex: number, day: number): string => {
@@ -77,7 +85,7 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-24 max-w-5xl mx-auto w-full desktop:min-h-[calc(100vh-140px)] desktop:flex desktop:flex-col desktop:justify-center">
+    <div className={`space-y-6 pb-24 mx-auto w-full desktop:min-h-[calc(100vh-140px)] desktop:flex desktop:flex-col desktop:justify-center ${calendarView === '3months' ? 'max-w-7xl' : 'max-w-5xl'}`}>
       
       {/* despoluído calendar header */}
       <div className="flex items-center justify-between gap-4">
@@ -115,115 +123,210 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
 
       {/* Calendar Grid Container / Timeline Container */}
       {calendarView === '3months' ? (
-        // Visão de Linha do Tempo em 3 Colunas (Lista Vertical por Mês)
-        <div className="grid grid-cols-1 desktop:grid-cols-3 gap-6">
-          {monthsToRender.map(({ year, monthIndex, name }) => {
-            const { totalDays } = getMonthDays(year, monthIndex);
-            const daysList = [];
+        isMobile ? (
+          // Visão de Linha do Tempo contínua para Mobile
+          <div className="card-premium p-4 flex flex-col space-y-4 h-full">
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 scroll-fade-mask">
+              {(() => {
+                const allDays: { year: number; monthIndex: number; monthName: string; day: number }[] = [];
+                monthsToRender.forEach(({ year, monthIndex, name }) => {
+                  const lastDay = new Date(year, monthIndex + 1, 0);
+                  const totalDays = lastDay.getDate();
+                  for (let day = 1; day <= totalDays; day++) {
+                    allDays.push({ year, monthIndex, monthName: name, day });
+                  }
+                });
 
-            for (let day = 1; day <= totalDays; day++) {
-              const dateStr = formatDateToYMD(year, monthIndex, day);
-              const isToday = dateStr === todayStr;
-              const isPast = dateStr < todayStr;
-              const dayBalance = dailyBalances[dateStr] ?? 0;
+                return allDays.map(({ year, monthIndex, monthName, day }, index) => {
+                  const dateStr = formatDateToYMD(year, monthIndex, day);
+                  const isToday = dateStr === todayStr;
+                  const isPast = dateStr < todayStr;
+                  const dayBalance = dailyBalances[dateStr] ?? 0;
+                  const dayTransactions = transactions.filter((t) => t.date === dateStr);
+                  const dayTransactionsCount = dayTransactions.length;
 
-              // Get transactions for this day
-              const dayTransactions = transactions.filter((t) => t.date === dateStr);
-              const dayTransactionsCount = dayTransactions.length;
+                  // Render a month divider at the start of a month or if index === 0
+                  const showMonthHeader = index === 0 || allDays[index - 1].monthIndex !== monthIndex;
 
-              // Heatmap color class (Progressive Health Scale)
-              let heatmapClass = 'bg-neutral-01 text-neutral-11 border-neutral-03 hover:bg-neutral-02';
-              if (dayBalance >= 5000) {
-                heatmapClass = 'bg-heatmap-high-bg text-heatmap-high-text border-heatmap-high-border';
-              } else if (dayBalance >= 300) {
-                heatmapClass = 'bg-heatmap-ok-bg text-heatmap-ok-text border-heatmap-ok-border';
-              } else if (dayBalance >= 100) {
-                heatmapClass = 'bg-heatmap-warn-bg text-heatmap-warn-text border-heatmap-warn-border';
-              } else if (dayBalance >= 0) {
-                heatmapClass = 'bg-heatmap-crit-bg text-heatmap-crit-text border-heatmap-crit-border';
-              } else {
-                heatmapClass = 'bg-heatmap-neg-bg text-heatmap-neg-text border-heatmap-neg-border';
+                  const dateObj = new Date(dateStr + 'T00:00:00');
+                  const weekdayName = dateObj.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
+
+                  // Temporal styles: opacity reduced if past
+                  const temporalOpacity = isPast ? 'opacity-35 grayscale contrast-75 brightness-[0.8] hover:opacity-85 hover:grayscale-0 hover:contrast-100 hover:brightness-100 transition-all' : 'opacity-100';
+                  const presentBorder = isToday
+                    ? (theme === 'dark'
+                      ? 'ring-2 ring-main border-main bg-main/15 shadow-[0_0_12px_rgba(254,247,175,0.25)] scale-[1.01] z-10 font-bold'
+                      : 'ring-2 ring-neutral-11 border-neutral-11 bg-neutral-02 shadow-[0_4px_12px_rgba(0,0,0,0.08)] scale-[1.01] z-10 font-bold')
+                    : 'border-neutral-02/60 bg-neutral-00/30';
+
+                  let heatmapClass = 'bg-neutral-01 text-neutral-11 border-neutral-03 hover:bg-neutral-02';
+                  if (dayBalance >= 5000) heatmapClass = 'bg-heatmap-high-bg text-heatmap-high-text border-heatmap-high-border';
+                  else if (dayBalance >= 300) heatmapClass = 'bg-heatmap-ok-bg text-heatmap-ok-text border-heatmap-ok-border';
+                  else if (dayBalance >= 100) heatmapClass = 'bg-heatmap-warn-bg text-heatmap-warn-text border-heatmap-warn-border';
+                  else if (dayBalance >= 0) heatmapClass = 'bg-heatmap-crit-bg text-heatmap-crit-text border-heatmap-crit-border';
+                  else heatmapClass = 'bg-heatmap-neg-bg text-heatmap-neg-text border-heatmap-neg-border';
+
+                  return (
+                    <React.Fragment key={dateStr}>
+                      {showMonthHeader && (
+                        <div className="sticky top-0 z-20 bg-neutral-00/90 backdrop-blur-sm py-2 text-center text-xs font-bold font-albert-sans text-neutral-11 uppercase border-b border-neutral-02 tracking-wider mt-4">
+                          {monthName}
+                        </div>
+                      )}
+                      <button
+                        onClick={() => onAddTransactionClick(dateStr)}
+                        className={`w-full flex items-center justify-between p-3 rounded-2xl border text-left transition-all hover:border-neutral-05 ${temporalOpacity} ${presentBorder}`}
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className={`flex flex-col items-center justify-center border rounded-xl w-10 h-10 flex-shrink-0 ${
+                            isToday 
+                              ? (theme === 'dark' ? 'bg-main text-zinc-950 border-main font-black' : 'bg-neutral-12 text-neutral-00 border-neutral-12 font-black') 
+                              : 'bg-neutral-01 border-neutral-03/80'
+                          }`}>
+                            <span className="text-xs font-black">{day}</span>
+                            <span className="text-[9px] uppercase font-bold">{weekdayName}</span>
+                          </div>
+
+                          <div className="flex-1 min-w-0 flex flex-col gap-1 pr-2">
+                            {dayTransactions.slice(0, 2).map((t) => {
+                              const tag = getTagDetails(t.tagId);
+                              const isExpense = t.type === 'saida' || t.type === 'fatura';
+                              return (
+                                <div key={t.id} className="flex items-center gap-1.5 text-[10px] text-neutral-10 truncate font-semibold">
+                                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: tag?.color || (isExpense ? '#EF4444' : '#10B981') }} />
+                                  <span className="truncate max-w-[80px]">{t.description}</span>
+                                  <span className={`ml-auto font-mono text-[9px] ${isExpense ? 'text-red-500' : 'text-success'}`}>
+                                    {isExpense ? '-' : '+'}R${Math.round(t.value)}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                            {dayTransactionsCount > 2 && (
+                              <span className="text-[9px] text-neutral-08 font-bold">
+                                +{dayTransactionsCount - 2} transações
+                              </span>
+                            )}
+                            {dayTransactionsCount === 0 && (
+                              <span className="text-[10px] text-neutral-07 italic">Sem eventos</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold font-albert-sans shadow-sm ${heatmapClass} flex-shrink-0`}>
+                          {formatCompactBalance(dayBalance)}
+                        </div>
+                      </button>
+                    </React.Fragment>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+        ) : (
+          // Visão de Linha do Tempo em 3 Colunas (Lista Vertical por Mês) - Desktop
+          <div className="grid grid-cols-1 desktop:grid-cols-3 gap-6">
+            {monthsToRender.map(({ year, monthIndex, name }) => {
+              const { totalDays } = getMonthDays(year, monthIndex);
+              const daysList = [];
+
+              for (let day = 1; day <= totalDays; day++) {
+                const dateStr = formatDateToYMD(year, monthIndex, day);
+                const isToday = dateStr === todayStr;
+                const isPast = dateStr < todayStr;
+                const dayBalance = dailyBalances[dateStr] ?? 0;
+
+                // Get transactions for this day
+                const dayTransactions = transactions.filter((t) => t.date === dateStr);
+                const dayTransactionsCount = dayTransactions.length;
+
+                // Heatmap color class
+                let heatmapClass = 'bg-neutral-01 text-neutral-11 border-neutral-03 hover:bg-neutral-02';
+                if (dayBalance >= 5000) {
+                  heatmapClass = 'bg-heatmap-high-bg text-heatmap-high-text border-heatmap-high-border';
+                } else if (dayBalance >= 300) {
+                  heatmapClass = 'bg-heatmap-ok-bg text-heatmap-ok-text border-heatmap-ok-border';
+                } else if (dayBalance >= 100) {
+                  heatmapClass = 'bg-heatmap-warn-bg text-heatmap-warn-text border-heatmap-warn-border';
+                } else if (dayBalance >= 0) {
+                  heatmapClass = 'bg-heatmap-crit-bg text-heatmap-crit-text border-heatmap-crit-border';
+                } else {
+                  heatmapClass = 'bg-heatmap-neg-bg text-heatmap-neg-text border-heatmap-neg-border';
+                }
+
+                const dateObj = new Date(dateStr + 'T00:00:00');
+                const weekdayName = dateObj.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
+
+                const temporalOpacity = isPast ? 'opacity-35 grayscale contrast-75 brightness-[0.8] hover:opacity-85 hover:grayscale-0 hover:contrast-100 hover:brightness-100 transition-all' : 'opacity-100';
+                const presentBorder = isToday
+                  ? (theme === 'dark'
+                    ? 'ring-2 ring-main border-main bg-main/15 shadow-[0_0_12px_rgba(254,247,175,0.25)] scale-[1.01] z-10 font-bold'
+                    : 'ring-2 ring-neutral-11 border-neutral-11 bg-neutral-02 shadow-[0_4px_12px_rgba(0,0,0,0.08)] scale-[1.01] z-10 font-bold')
+                  : 'border-neutral-02/60 bg-neutral-00/30';
+
+                daysList.push(
+                  <button
+                    key={`timeline-day-${day}`}
+                    onClick={() => {
+                      onAddTransactionClick(dateStr);
+                    }}
+                    className={`w-full flex items-center justify-between p-3 rounded-2xl border text-left transition-all hover:border-neutral-05 ${temporalOpacity} ${presentBorder}`}
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className={`flex flex-col items-center justify-center border rounded-xl w-10 h-10 flex-shrink-0 ${
+                        isToday 
+                          ? (theme === 'dark' ? 'bg-main text-zinc-950 border-main font-black' : 'bg-neutral-12 text-neutral-00 border-neutral-12 font-black') 
+                          : 'bg-neutral-01 border-neutral-03/80'
+                      }`}>
+                        <span className="text-xs font-black">{day}</span>
+                        <span className="text-[9px] uppercase font-bold">{weekdayName}</span>
+                      </div>
+
+                      {/* Actual list of transactions for this day */}
+                      <div className="flex-1 min-w-0 flex flex-col gap-1 pr-2">
+                        {dayTransactions.slice(0, 2).map((t) => {
+                          const tag = getTagDetails(t.tagId);
+                          const isExpense = t.type === 'saida' || t.type === 'fatura';
+                          return (
+                            <div key={t.id} className="flex items-center gap-1.5 text-[10px] text-neutral-10 truncate font-semibold">
+                              <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: tag?.color || (isExpense ? '#EF4444' : '#10B981') }} />
+                              <span className="truncate max-w-[80px]">{t.description}</span>
+                              <span className={`ml-auto font-mono text-[9px] ${isExpense ? 'text-red-500' : 'text-success'}`}>
+                                {isExpense ? '-' : '+'}R${Math.round(t.value)}
+                              </span>
+                            </div>
+                          );
+                        })}
+                        {dayTransactionsCount > 2 && (
+                          <span className="text-[9px] text-neutral-08 font-bold">
+                            +{dayTransactionsCount - 2} transações
+                          </span>
+                        )}
+                        {dayTransactionsCount === 0 && (
+                          <span className="text-[10px] text-neutral-07 italic">Sem eventos</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold font-albert-sans shadow-sm ${heatmapClass} flex-shrink-0`}>
+                      {formatCompactBalance(dayBalance)}
+                    </div>
+                  </button>
+                );
               }
 
-              const dateObj = new Date(dateStr + 'T00:00:00');
-              const weekdayName = dateObj.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
-
-              // Temporal styles: opacidade reduzida se passado, contorno sutil se hoje
-              const temporalOpacity = isPast ? 'opacity-35 grayscale contrast-75 brightness-[0.8] hover:opacity-85 hover:grayscale-0 hover:contrast-100 hover:brightness-100 transition-all' : 'opacity-100';
-              const presentBorder = isToday
-                ? (theme === 'dark'
-                  ? 'ring-2 ring-main border-main bg-main/15 shadow-[0_0_12px_rgba(254,247,175,0.25)] scale-[1.01] z-10 font-bold'
-                  : 'ring-2 ring-neutral-11 border-neutral-11 bg-neutral-02 shadow-[0_4px_12px_rgba(0,0,0,0.08)] scale-[1.01] z-10 font-bold')
-                : 'border-neutral-02/60 bg-neutral-00/30';
-
-              daysList.push(
-                <button
-                  key={`timeline-day-${day}`}
-                  onClick={() => {
-                    onAddTransactionClick(dateStr);
-                  }}
-                  className={`w-full flex items-center justify-between p-3 rounded-2xl border text-left transition-all hover:border-neutral-05 ${temporalOpacity} ${presentBorder}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`flex flex-col items-center justify-center border rounded-xl w-10 h-10 flex-shrink-0 ${
-                      isToday 
-                        ? (theme === 'dark' ? 'bg-main text-zinc-950 border-main font-black' : 'bg-neutral-12 text-neutral-00 border-neutral-12 font-black') 
-                        : 'bg-neutral-01 border-neutral-03/80'
-                    }`}>
-                      <span className={`text-xs font-black ${
-                        isToday 
-                          ? (theme === 'dark' ? 'text-zinc-950' : 'text-neutral-00') 
-                          : 'text-neutral-11'
-                      }`}>{day}</span>
-                      <span className={`text-[9px] uppercase font-bold ${
-                        isToday 
-                          ? (theme === 'dark' ? 'text-zinc-800' : 'text-neutral-03') 
-                          : 'text-neutral-08'
-                      }`}>{weekdayName}</span>
-                    </div>
-
-                    {/* Transaction dot indicators */}
-                    <div className="flex items-center gap-1.5">
-                      {dayTransactions.slice(0, 3).map((t, idx) => {
-                        const tag = getTagDetails(t.tagId);
-                        const dotColor = tag?.color || (t.type === 'entrada' ? '#10B981' : t.type === 'economia' ? '#8B5CF6' : '#EF4444');
-                        return (
-                          <span
-                            key={t.id + '-' + idx}
-                            className="w-1.5 h-1.5 rounded-full border border-black/10 flex-shrink-0"
-                            style={{ backgroundColor: dotColor }}
-                            title={t.description}
-                          />
-                        );
-                      })}
-                      {dayTransactionsCount > 3 && (
-                        <span className="text-[8px] text-neutral-08 font-bold pl-0.5">
-                          +{dayTransactionsCount - 3}
-                        </span>
-                      )}
-                    </div>
+              return (
+                <div key={name} className="card-premium p-4 flex flex-col space-y-4 desktop:h-[72vh] desktop:max-h-[72vh] h-auto">
+                  <h3 className="text-base font-bold font-albert-sans text-neutral-11 capitalize text-center border-b border-neutral-02 pb-2">
+                    {name}
+                  </h3>
+                  <div className="flex-1 desktop:overflow-y-auto overflow-visible space-y-2 pr-1 scroll-fade-mask">
+                    {daysList}
                   </div>
-
-                  {/* Balance Badge */}
-                  <div className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold font-albert-sans shadow-sm ${heatmapClass}`}>
-                    {formatCompactBalance(dayBalance)}
-                  </div>
-                </button>
-              );
-            }
-
-            return (
-              <div key={name} className="card-premium p-4 flex flex-col space-y-4 desktop:h-[72vh] desktop:max-h-[72vh] h-auto">
-                <h3 className="text-base font-bold font-albert-sans text-neutral-11 capitalize text-center border-b border-neutral-02 pb-2">
-                  {name}
-                </h3>
-                <div className="flex-1 desktop:overflow-y-auto overflow-visible space-y-2 pr-1 scroll-fade-mask">
-                  {daysList}
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )
       ) : (
         // Visão de 1 Mês (Grade Tradicional de Calendário)
         <div className="grid grid-cols-1 gap-6">
@@ -234,7 +337,7 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
 
             // Padding blocks
             for (let i = 0; i < startDayOfWeek; i++) {
-              dayBlocks.push(<div key={`empty-${i}`} className="h-full min-h-16 border border-transparent" />);
+              dayBlocks.push(<div key={`empty-${i}`} className="h-full min-h-24 border border-transparent" />);
             }
 
             // Render Days
@@ -244,8 +347,9 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
               const isPast = dateStr < todayStr;
               const dayBalance = dailyBalances[dateStr] ?? 0;
 
-              // Day block specific transactions count
-              const dayTransactionsCount = transactions.filter((t) => t.date === dateStr).length;
+              // Day block specific transactions list and count
+              const dayTransactions = transactions.filter((t) => t.date === dateStr);
+              const dayTransactionsCount = dayTransactions.length;
 
               // Heatmap color class (Progressive Health Scale)
               let heatmapClass = 'bg-neutral-01 text-neutral-11 border-neutral-03 hover:bg-neutral-02';
@@ -275,7 +379,7 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
                   onClick={() => {
                     onAddTransactionClick(dateStr);
                   }}
-                  className={`rounded-xl flex flex-col justify-between text-left transition-all h-full min-h-16 p-2 ${heatmapClass} ${presentBorder} ${temporalOpacity}`}
+                  className={`rounded-xl flex flex-col justify-between text-left transition-all h-full min-h-24 p-2 ${heatmapClass} ${presentBorder} ${temporalOpacity}`}
                 >
                   <div className="flex items-center justify-between w-full">
                     <span className={`text-xs font-black ${
@@ -287,18 +391,40 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
                     }`}>
                       {day}
                     </span>
-                    
-                    {/* Small badge for transactions count */}
-                    {dayTransactionsCount > 0 && (
-                      <span className="text-[9px] bg-neutral-00/55 px-1.5 py-0.5 rounded-full font-bold">
-                        {dayTransactionsCount} {dayTransactionsCount === 1 ? 'lanç.' : 'lançs.'}
-                      </span>
+                  </div>
+
+                  {/* Day's transactions list (neat & legible values) */}
+                  <div className="w-full my-1.5 flex flex-col gap-0.5 overflow-hidden">
+                    {dayTransactions.slice(0, 2).map((t, idx) => {
+                      const isExpense = t.type === 'saida' || t.type === 'fatura';
+                      return (
+                        <div 
+                          key={t.id || idx} 
+                          className="text-[9.5px] font-semibold text-neutral-11 flex items-center justify-between gap-1 w-full truncate"
+                          title={t.description}
+                        >
+                          <span className="truncate max-w-[45px] text-[8px] text-neutral-08 font-normal">{t.description}</span>
+                          <div className="flex items-center gap-0.5">
+                            <span className={isExpense ? 'text-rose-500 font-bold' : 'text-success font-bold'}>
+                              {isExpense ? '-' : '+'}R${Math.round(t.value)}
+                            </span>
+                            {isExpense && (
+                              <span className="w-1 h-1 rounded-full bg-red-500 flex-shrink-0" />
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {dayTransactionsCount > 2 && (
+                      <div className="text-[8px] text-neutral-08 text-right font-bold">
+                        +{dayTransactionsCount - 2} mais
+                      </div>
                     )}
                   </div>
                   
                   {/* Projected Balance Display */}
-                  <div className="w-full text-right overflow-hidden">
-                    <span className="font-bold font-albert-sans block truncate text-sm">
+                  <div className="w-full text-right overflow-hidden border-t border-neutral-02/30 pt-1 mt-1">
+                    <span className="font-bold font-albert-sans block truncate text-[11px] tablet:text-xs text-neutral-11">
                       R$ {Math.round(dayBalance).toLocaleString('pt-BR')}
                     </span>
                   </div>

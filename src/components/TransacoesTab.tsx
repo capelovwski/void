@@ -218,13 +218,13 @@ export const TransacoesTab: React.FC<TransacoesTabProps> = ({
                     </div>
 
                     {/* Actions on hover */}
-                    <div className="flex gap-1 opacity-80 tablet:opacity-0 group-hover:opacity-100 transition-opacity w-14 justify-end">
+                    <div className="flex gap-1 opacity-80 tablet:opacity-0 group-hover:opacity-100 transition-opacity w-24 tablet:w-14 justify-end items-center">
                       <button
                         onClick={() => onEditTransaction(t)}
                         title="Editar"
-                        className="p-1 rounded text-neutral-08 hover:bg-neutral-02 hover:text-neutral-11 transition-all"
+                        className="w-11 h-11 tablet:w-6 tablet:h-6 flex items-center justify-center rounded-xl text-neutral-08 hover:bg-neutral-02 hover:text-neutral-11 transition-all"
                       >
-                        <Edit3 size={12} />
+                        <Edit3 size={16} className="tablet:w-3.5 tablet:h-3.5" />
                       </button>
                       <button
                         onClick={() => {
@@ -233,9 +233,9 @@ export const TransacoesTab: React.FC<TransacoesTabProps> = ({
                           }
                         }}
                         title="Excluir"
-                        className="p-1 rounded text-red-500/80 dark:text-red-400/80 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 transition-all"
+                        className="w-11 h-11 tablet:w-6 tablet:h-6 flex items-center justify-center rounded-xl text-red-500/80 dark:text-red-400/80 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 transition-all"
                       >
-                        <Trash2 size={12} />
+                        <Trash2 size={16} className="tablet:w-3.5 tablet:h-3.5" />
                       </button>
                     </div>
                   </div>
@@ -302,11 +302,11 @@ export const TransacoesTab: React.FC<TransacoesTabProps> = ({
                     </div>
 
                     {/* Actions: Edit & Delete */}
-                    <div className="flex gap-1.5 opacity-80 tablet:opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex gap-1.5 opacity-80 tablet:opacity-0 group-hover:opacity-100 transition-opacity items-center">
                       <button
                         onClick={() => onEditTransaction(t)}
                         title="Editar"
-                        className="p-2 rounded-lg text-neutral-09 hover:bg-neutral-02 hover:text-neutral-11 transition-all"
+                        className="w-11 h-11 tablet:w-9 tablet:h-9 flex items-center justify-center rounded-xl text-neutral-09 hover:bg-neutral-02 hover:text-neutral-11 transition-all"
                       >
                         <Edit3 size={16} />
                       </button>
@@ -317,7 +317,7 @@ export const TransacoesTab: React.FC<TransacoesTabProps> = ({
                           }
                         }}
                         title="Excluir"
-                        className="p-2 rounded-lg text-red-500/80 dark:text-red-400/80 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 transition-all"
+                        className="w-11 h-11 tablet:w-9 tablet:h-9 flex items-center justify-center rounded-xl text-red-500/80 dark:text-red-400/80 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 transition-all"
                       >
                         <Trash2 size={16} />
                       </button>

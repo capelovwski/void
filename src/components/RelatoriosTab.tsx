@@ -14,12 +14,12 @@ interface RelatoriosTabProps {
   initialBalance: number;
   banks: Bank[];
   onUpdateBanks: (newBanks: Bank[]) => void;
+  theme: 'dark' | 'light';
 }
 
 interface WidgetWrapperProps {
   id: string;
   widgetSizes: Record<string, 'half' | 'full'>;
-  moveWidget: (id: string, direction: number) => void;
   toggleWidgetSize: (id: string) => void;
   renderWidgetContent: (id: string) => React.ReactNode;
 }
@@ -27,18 +27,20 @@ interface WidgetWrapperProps {
 const WidgetWrapper: React.FC<WidgetWrapperProps> = ({
   id,
   widgetSizes,
-  moveWidget,
   toggleWidgetSize,
   renderWidgetContent
 }) => {
   const dragControls = useDragControls();
+
+  // Determine grid span based on widget size config
+  const sizeClass = widgetSizes[id] === 'half' ? 'col-span-1' : 'col-span-1 desktop:col-span-2';
 
   return (
     <Reorder.Item
       value={id}
       dragListener={false}
       dragControls={dragControls}
-      className="relative"
+      className={`relative ${sizeClass}`}
       whileDrag={{
         scale: 1.02,
         rotate: [-1.2, 1.2],
@@ -56,9 +58,9 @@ const WidgetWrapper: React.FC<WidgetWrapperProps> = ({
       }}
     >
       {/* Outer drag card wrapper styling */}
-      <div className="relative group">
+      <div className="relative group h-full">
         {/* Visual drag handle top-bar */}
-        <div className="absolute top-3 left-3 z-20 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
           <div
             onPointerDown={(e) => dragControls.start(e)}
             className="cursor-grab active:cursor-grabbing p-1 bg-neutral-00 rounded-lg border border-neutral-03 shadow-sm text-neutral-04 hover:text-neutral-08"
@@ -67,38 +69,20 @@ const WidgetWrapper: React.FC<WidgetWrapperProps> = ({
             <GripVertical size={14} />
           </div>
           
-          <div className="flex bg-neutral-00 rounded-lg border border-neutral-03 shadow-sm overflow-hidden divide-x divide-neutral-02">
+          {id !== 'summary' && id !== 'savings_rate' && (
             <button
-              onClick={() => moveWidget(id, -1)}
-              className="p-1 hover:bg-neutral-01 text-neutral-06 hover:text-neutral-10"
-              title="Mover para Cima"
+              onClick={() => toggleWidgetSize(id)}
+              className="p-1 bg-neutral-00 rounded-lg border border-neutral-03 shadow-sm hover:bg-neutral-01 text-neutral-06 hover:text-neutral-10 flex items-center justify-center"
+              title="Alternar Tamanho"
             >
-              <ArrowUp size={12} />
+              {widgetSizes[id] === 'full' ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
             </button>
-            <button
-              onClick={() => moveWidget(id, 1)}
-              className="p-1 hover:bg-neutral-01 text-neutral-06 hover:text-neutral-10"
-              title="Mover para Baixo"
-            >
-              <ArrowDown size={12} />
-            </button>
-            {id !== 'summary' && id !== 'savings_rate' && (
-              <button
-                onClick={() => toggleWidgetSize(id)}
-                className="p-1 hover:bg-neutral-01 text-neutral-06 hover:text-neutral-10"
-                title="Alternar Tamanho"
-              >
-                {widgetSizes[id] === 'full' ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
-              </button>
-            )}
-          </div>
+          )}
         </div>
 
         {/* Render the actual widget inside size class container */}
-        <div className={widgetSizes[id] === 'half' ? 'grid grid-cols-1 desktop:grid-cols-2 gap-6' : 'w-full'}>
-          <div className={widgetSizes[id] === 'half' ? 'desktop:col-span-1' : 'w-full'}>
-            {renderWidgetContent(id)}
-          </div>
+        <div className="w-full h-full">
+          {renderWidgetContent(id)}
         </div>
       </div>
     </Reorder.Item>
@@ -111,7 +95,14 @@ export const RelatoriosTab: React.FC<RelatoriosTabProps> = ({
   initialBalance,
   banks,
   onUpdateBanks,
+  theme,
 }) => {
+  const isDark = theme === 'dark';
+  const gridLineColor = isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E5E5';
+  const axisColor = isDark ? 'rgba(255, 255, 255, 0.2)' : '#AEAEAE';
+  const textFillColor = isDark ? '#A3A3A3' : '#605F5F'; // neutral-06 / neutral-10
+  const lineColor = isDark ? '#FAFAFA' : '#1A1A1A'; // neutral-11
+  const donutBgColor = isDark ? 'rgba(255, 255, 255, 0.06)' : '#EEEEEE';
   // 1. Core Financial Calculations
   const sumByType = (type: Transaction['type']) => {
     return transactions
@@ -325,17 +316,6 @@ export const RelatoriosTab: React.FC<RelatoriosTabProps> = ({
   const [showFilters, setShowFilters] = useState(false);
 
   // 6. Customization Handlers
-  const moveWidget = (id: string, direction: number) => {
-    const index = widgetOrder.indexOf(id);
-    if (index === -1) return;
-    const targetIndex = index + direction;
-    if (targetIndex < 0 || targetIndex >= widgetOrder.length) return;
-
-    const newOrder = [...widgetOrder];
-    newOrder[index] = widgetOrder[targetIndex];
-    newOrder[targetIndex] = widgetOrder[index];
-    setWidgetOrder(newOrder);
-  };
 
   const toggleWidgetSize = (id: string) => {
     setWidgetSizes(prev => ({
@@ -501,16 +481,16 @@ export const RelatoriosTab: React.FC<RelatoriosTabProps> = ({
                   </linearGradient>
                 </defs>
                 
-                <line x1={paddingX} y1={paddingY} x2={svgWidth - paddingX} y2={paddingY} stroke="#EEEEEE" strokeDasharray="3,3" />
-                <line x1={paddingX} y1={svgHeight / 2} x2={svgWidth - paddingX} y2={svgHeight / 2} stroke="#EEEEEE" strokeDasharray="3,3" />
-                <line x1={paddingX} y1={svgHeight - paddingY} x2={svgWidth - paddingX} y2={svgHeight - paddingY} stroke="#DDDDDD" />
+                <line x1={paddingX} y1={paddingY} x2={svgWidth - paddingX} y2={paddingY} stroke={gridLineColor} strokeDasharray="3,3" />
+                <line x1={paddingX} y1={svgHeight / 2} x2={svgWidth - paddingX} y2={svgHeight / 2} stroke={gridLineColor} strokeDasharray="3,3" />
+                <line x1={paddingX} y1={svgHeight - paddingY} x2={svgWidth - paddingX} y2={svgHeight - paddingY} stroke={axisColor} />
 
                 {areaPath && (
                   <path d={areaPath} fill="url(#chartGradient)" />
                 )}
 
                 {linePath && (
-                  <path d={linePath} fill="none" stroke="#605F5F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d={linePath} fill="none" stroke={isDark ? '#FEF7AF' : '#8B5CF6'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                 )}
 
                 {timelineData.map((d, index) => {
@@ -520,8 +500,8 @@ export const RelatoriosTab: React.FC<RelatoriosTabProps> = ({
                   if (index === 0 || index === Math.floor(timelineData.length / 2) || index === timelineData.length - 1) {
                     return (
                       <g key={`dot-${index}`}>
-                        <circle cx={x} cy={y} r="5" fill="#1A1A1A" stroke="#FFFFFF" strokeWidth="1.5" />
-                        <text x={x} y={y - 10} textAnchor="middle" className="text-[10px] font-bold fill-neutral-12">
+                        <circle cx={x} cy={y} r="5" fill={isDark ? '#18181B' : '#FFFFFF'} stroke={isDark ? '#FEF7AF' : '#8B5CF6'} strokeWidth="1.5" />
+                        <text x={x} y={y - 10} textAnchor="middle" className="text-[10px] font-bold" fill={isDark ? '#FAFAFA' : '#1A1A1A'}>
                           R$ {Math.round(d.balance).toLocaleString('pt-BR')}
                         </text>
                       </g>
@@ -530,13 +510,13 @@ export const RelatoriosTab: React.FC<RelatoriosTabProps> = ({
                   return null;
                 })}
 
-                <text x={paddingX} y={svgHeight - 4} textAnchor="start" className="text-[10px] font-medium fill-neutral-09">
+                <text x={paddingX} y={svgHeight - 4} textAnchor="start" className="text-[10px] font-medium" fill={textFillColor}>
                   Hoje
                 </text>
-                <text x={svgWidth / 2} y={svgHeight - 4} textAnchor="middle" className="text-[10px] font-medium fill-neutral-09">
+                <text x={svgWidth / 2} y={svgHeight - 4} textAnchor="middle" className="text-[10px] font-medium" fill={textFillColor}>
                   +45 dias
                 </text>
-                <text x={svgWidth - paddingX} y={svgHeight - 4} textAnchor="end" className="text-[10px] font-medium fill-neutral-09">
+                <text x={svgWidth - paddingX} y={svgHeight - 4} textAnchor="end" className="text-[10px] font-medium" fill={textFillColor}>
                   +90 dias
                 </text>
               </svg>
@@ -562,7 +542,7 @@ export const RelatoriosTab: React.FC<RelatoriosTabProps> = ({
               <div className="flex-1 flex flex-col tablet:flex-row items-center justify-center gap-6">
                 <div className="relative w-40 h-40 flex-shrink-0">
                   <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                    <circle cx="50" cy="50" r="40" fill="none" stroke="#F4F4F4" strokeWidth="12" />
+                    <circle cx="50" cy="50" r="40" fill="none" stroke={donutBgColor} strokeWidth="12" />
                     
                     {tagData.map((slice) => {
                       const radius = 40;
@@ -648,7 +628,7 @@ export const RelatoriosTab: React.FC<RelatoriosTabProps> = ({
               </button>
             </div>
 
-            <div className="grid grid-cols-1 tablet:grid-cols-3 gap-4">
+            <div className={`grid gap-4 ${widgetSizes['multi_banks'] === 'half' ? 'grid-cols-1' : 'grid-cols-1 tablet:grid-cols-3'}`}>
               {banks.map((bank) => {
                 const totalBankBalances = banks.reduce((sum, b) => sum + b.balance, 0) || 1;
                 const bankFatura = totalFaturas * (bank.balance / totalBankBalances);
@@ -753,7 +733,7 @@ export const RelatoriosTab: React.FC<RelatoriosTabProps> = ({
         axis="y"
         values={widgetOrder}
         onReorder={setWidgetOrder}
-        className="flex flex-col gap-6"
+        className="grid grid-cols-1 desktop:grid-cols-2 gap-6"
       >
         {widgetOrder.map((id) => {
           if (!visibleWidgets[id]) return null;
@@ -763,7 +743,6 @@ export const RelatoriosTab: React.FC<RelatoriosTabProps> = ({
               key={id}
               id={id}
               widgetSizes={widgetSizes}
-              moveWidget={moveWidget}
               toggleWidgetSize={toggleWidgetSize}
               renderWidgetContent={renderWidgetContent}
             />

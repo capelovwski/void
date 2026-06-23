@@ -178,11 +178,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         }}
       >
         {/* Handle de arrasto no mobile */}
-        <div className="w-12 h-1 bg-neutral-03 rounded-full mx-auto my-3 block tablet:hidden flex-shrink-0" />
+        <div className="w-12 h-1.5 bg-neutral-03/75 rounded-full mx-auto my-3 block tablet:hidden flex-shrink-0" />
 
         {/* Header */}
-        <div className="flex items-center justify-between p-6 pt-3 tablet:pt-6 border-b border-neutral-02 bg-neutral-01">
-          <h3 className="text-xl font-semibold font-albert-sans text-neutral-11">
+        <div className="flex items-center justify-between p-4 tablet:p-6 border-b border-neutral-02 bg-neutral-01">
+          <h3 className="text-base tablet:text-xl font-semibold font-albert-sans text-neutral-11">
             {editingTransaction ? 'Editar Movimentação' : 'Nova Movimentação'}
           </h3>
           <button
@@ -194,7 +194,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 tablet:p-6 space-y-4 tablet:space-y-6">
           {/* Daily Spend Limit dynamic display */}
           <div className="p-3.5 rounded-2xl border border-neutral-03/70 bg-neutral-01 flex items-center justify-between">
             <div>
