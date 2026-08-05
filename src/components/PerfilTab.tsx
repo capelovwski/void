@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, LogOut, HelpCircle, Moon, Sun, Shield, BookOpen, Layers, PiggyBank, CircleAlert, NotebookPen } from 'lucide-react';
+import { User, LogOut, HelpCircle, Moon, Sun, Shield, BookOpen, Layers, PiggyBank, CircleAlert } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 interface PerfilTabProps {
@@ -75,8 +75,8 @@ export const PerfilTab: React.FC<PerfilTabProps> = ({
                 </div>
                 <div className="space-y-1 max-w-sm">
                   <h4 className="text-sm font-bold text-neutral-11">Você ainda não está conectado</h4>
-                  <p className="text-xs text-neutral-08 flex items-center justify-center gap-1 flex-wrap">
-                    Vá até a aba <NotebookPen size={12} className="inline text-neutral-10" /> <strong>Notas</strong> para criar sua conta ou fazer login com e-mail e senha.
+                  <p className="text-xs text-neutral-08">
+                    Saia e entre novamente com e-mail e senha para sincronizar seus dados.
                   </p>
                 </div>
               </div>

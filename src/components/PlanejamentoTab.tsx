@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import type { Tag, PlanningConfig, FixedExpense, Transaction } from '../types';
-import { 
+import {
   Trash2, Wallet, Palette, Tag as TagIcon, Sparkles, TrendingUp, Plus, Award, Zap, Target,
   Utensils, Film, PiggyBank, Car, Heart, Home, ShoppingBag, BookOpen, Wrench, Briefcase
 } from 'lucide-react';
+import { NotesSection } from './NotesSection';
 
 export const CATEGORY_ICONS = {
   utensils: Utensils,
@@ -625,6 +626,10 @@ export const PlanejamentoTab: React.FC<PlanejamentoTabProps> = ({
         </div>
 
       </div>
+
+      {/* Anotações pessoais (antes uma aba própria, agora parte do
+          Planejamento para manter 5 itens na navegação) */}
+      <NotesSection />
     </div>
   );
 };

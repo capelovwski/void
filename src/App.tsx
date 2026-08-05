@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Wallet, List, Plus, TrendingUp, PenLine, Bell, User, NotebookPen } from 'lucide-react';
+import { Wallet, List, Plus, TrendingUp, PenLine, Bell, User } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import type { Transaction, Tag, PlanningConfig, RealSpends, Bank } from './types';
 import { DEFAULT_TAGS } from './utils/mockData';
@@ -13,7 +13,6 @@ import { TransacoesTab } from './components/TransacoesTab';
 import { RelatoriosTab } from './components/RelatoriosTab';
 import { PlanejamentoTab } from './components/PlanejamentoTab';
 import { PerfilTab } from './components/PerfilTab';
-import { NotesTab } from './components/NotesTab';
 import { ParticleBackground } from './components/ParticleBackground';
 import { TransactionModal } from './components/TransactionModal';
 import { AuthScreen } from './components/auth/AuthScreen';
@@ -32,7 +31,7 @@ interface AppNotification {
 
 function App() {
   // 1. App Navigation State
-  const [activeTab, setActiveTab] = useState<'saldos' | 'transacoes' | 'relatorios' | 'configuracoes' | 'notas' | 'perfil'>('saldos');
+  const [activeTab, setActiveTab] = useState<'saldos' | 'transacoes' | 'relatorios' | 'configuracoes' | 'perfil'>('saldos');
 
   // 2. Theme & Auth
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -392,21 +391,6 @@ function App() {
             </span>
           </button>
 
-          {/* Notas */}
-          <button
-            onClick={() => setActiveTab('notas')}
-            className={`flex items-center w-full px-3 py-3 rounded-2xl transition-all ${
-              activeTab === 'notas'
-                ? 'bg-neutral-12 text-neutral-00 shadow-sm'
-                : 'text-neutral-08 hover:text-neutral-11 hover:bg-neutral-02/60'
-            }`}
-          >
-            <NotebookPen size={20} className="flex-shrink-0 mx-auto group-hover:mx-0" />
-            <span className="text-xs font-semibold group-hover:ml-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap overflow-hidden w-0 group-hover:w-auto">
-              Notas
-            </span>
-          </button>
-
           {/* Perfil */}
           <button
             onClick={() => setActiveTab('perfil')}
@@ -561,8 +545,6 @@ function App() {
           />
         )}
 
-        {activeTab === 'notas' && <NotesTab />}
-
         {activeTab === 'perfil' && (
           <PerfilTab
             theme={theme}
@@ -644,21 +626,6 @@ function App() {
           >
             <PenLine size={20} />
             <span className="text-[8px] font-bold mt-0.5 leading-none">Planejamento</span>
-          </button>
-
-          {/* Slot 6: Notas */}
-          <button
-            onClick={() => setActiveTab('notas')}
-            className={`px-1.5 py-1.5 rounded-2xl flex flex-col items-center justify-center transition-all ${
-              activeTab === 'notas'
-                ? 'bg-neutral-12 text-neutral-00 shadow-sm'
-                : 'text-neutral-08 dark:text-neutral-05 hover:text-neutral-11'
-            }`}
-            style={{ minWidth: '52px', minHeight: '48px' }}
-            title="Notas"
-          >
-            <NotebookPen size={20} />
-            <span className="text-[8px] font-bold mt-0.5 leading-none">Notas</span>
           </button>
         </div>
       </nav>
