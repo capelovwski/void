@@ -423,12 +423,17 @@ function App() {
       </aside>
 
       {/* Top Header */}
-      <header className="sticky top-0 z-30 bg-bg-01/80 backdrop-blur-md border-b border-neutral-03/60 px-6 py-4 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center">
-          <img 
-            src={theme === 'dark' ? voidDarkModeLogo : voidLightModeLogo} 
-            alt="Void Logo" 
-            className="h-12 w-auto object-contain transition-transform duration-300 hover:scale-105" 
+      {/* pt-[env(safe-area-inset-top)] empurra o conteúdo para baixo da status
+          bar do iPhone (relógio, wi-fi, bateria, Dynamic Island). */}
+      <header
+        className="sticky top-0 z-30 bg-bg-01/80 backdrop-blur-md border-b border-neutral-03/60 px-6 pb-3 flex items-center justify-between flex-shrink-0"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}
+      >
+        <div className="flex items-center min-w-0">
+          <img
+            src={theme === 'dark' ? voidDarkModeLogo : voidLightModeLogo}
+            alt="Void Logo"
+            className="h-8 tablet:h-12 w-auto max-w-[45vw] object-contain shrink-0 transition-transform duration-300 hover:scale-105"
           />
         </div>
 
@@ -554,8 +559,13 @@ function App() {
       </main>
 
       {/* Navigation Footer (Floating Navigation Menu - Desktop Style) */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 px-4 pb-6 pt-2 bg-gradient-to-t from-bg-01 via-bg-01 to-transparent desktop:hidden">
-        <div className="max-w-md mx-auto bg-neutral-00/95 backdrop-blur-md text-neutral-11 rounded-3xl border border-neutral-03/80 shadow-2xl flex items-center justify-around py-2 px-3 relative">
+      {/* O padding inferior soma a safe area para a barra não ficar sob a
+          home indicator do iPhone. */}
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-40 px-4 pt-2 bg-gradient-to-t from-bg-01 via-bg-01 to-transparent desktop:hidden"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
+      >
+        <div className="max-w-md mx-auto bg-neutral-00/95 backdrop-blur-md text-neutral-11 rounded-3xl border border-neutral-03/80 shadow-2xl flex items-center justify-between py-2 px-3 relative">
           
           {/* Slot 1: Saldos */}
           <button

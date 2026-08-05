@@ -2,7 +2,11 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover: o conteúdo ocupa a tela toda (inclusive sob a
+         status bar e a home indicator), e o CSS compensa com env(safe-area-*).
+         maximum-scale/user-scalable: trava o zoom para o app não "esticar"
+         além do display, como num app nativo. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

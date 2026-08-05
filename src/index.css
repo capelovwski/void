@@ -236,6 +236,17 @@
   border-color: hsl(var(--border));
 }
 
+html {
+  /* Sem esse background, o "puxão" de scroll no iOS revela o fundo branco
+     padrão do WebView atrás do body. */
+  background-color: hsl(var(--background));
+  /* Impede o efeito elástico de rolagem levar a página inteira junto. */
+  overscroll-behavior: none;
+  /* Trava o zoom por duplo-toque/pinça, como num app nativo. */
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
@@ -245,6 +256,7 @@ body {
   line-height: 1.4em;
   font-weight: 400;
   overflow-x: hidden;
+  overscroll-behavior: none;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -283,6 +295,14 @@ h6 { font-size: 16px; }
     overflow: hidden;
     position: fixed;
     width: 100%;
+  }
+
+  /* Áreas roláveis internas não devem propagar o "puxão" para o WebView —
+     é isso que fazia surgir a faixa branca ao forçar o scroll. */
+  .overflow-y-auto,
+  .overflow-y-scroll {
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* General typography scale down for mobile readability */
