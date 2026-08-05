@@ -578,31 +578,31 @@ function App() {
           {/* Slot 1: Saldos */}
           <button
             onClick={() => setActiveTab('saldos')}
-            className={`px-2.5 py-1.5 rounded-2xl flex flex-col items-center justify-center transition-all ${
+            className={`px-1.5 py-1.5 rounded-2xl flex flex-col items-center justify-center transition-all ${
               activeTab === 'saldos'
                 ? 'bg-neutral-12 text-neutral-00 shadow-sm'
                 : 'text-neutral-08 dark:text-neutral-05 hover:text-neutral-11'
             }`}
-            style={{ minWidth: '64px', minHeight: '48px' }}
+            style={{ minWidth: '52px', minHeight: '48px' }}
             title="Saldos"
           >
             <Wallet size={20} />
-            <span className="text-[9px] font-bold mt-0.5">Saldos</span>
+            <span className="text-[8px] font-bold mt-0.5 leading-none">Saldos</span>
           </button>
  
           {/* Slot 2: Transações */}
           <button
             onClick={() => setActiveTab('transacoes')}
-            className={`px-2.5 py-1.5 rounded-2xl flex flex-col items-center justify-center transition-all ${
+            className={`px-1.5 py-1.5 rounded-2xl flex flex-col items-center justify-center transition-all ${
               activeTab === 'transacoes'
                 ? 'bg-neutral-12 text-neutral-00 shadow-sm'
                 : 'text-neutral-08 dark:text-neutral-05 hover:text-neutral-11'
             }`}
-            style={{ minWidth: '64px', minHeight: '48px' }}
+            style={{ minWidth: '52px', minHeight: '48px' }}
             title="Lista"
           >
             <List size={20} />
-            <span className="text-[9px] font-bold mt-0.5">Lista</span>
+            <span className="text-[8px] font-bold mt-0.5 leading-none">Lista</span>
           </button>
  
           {/* Slot 3: Highlighted Central Plus Button (Desktop Squircle Style & Centered) */}
@@ -619,46 +619,46 @@ function App() {
           {/* Slot 4: Relatórios */}
           <button
             onClick={() => setActiveTab('relatorios')}
-            className={`px-2.5 py-1.5 rounded-2xl flex flex-col items-center justify-center transition-all ${
+            className={`px-1.5 py-1.5 rounded-2xl flex flex-col items-center justify-center transition-all ${
               activeTab === 'relatorios'
                 ? 'bg-neutral-12 text-neutral-00 shadow-sm'
                 : 'text-neutral-08 dark:text-neutral-05 hover:text-neutral-11'
             }`}
-            style={{ minWidth: '64px', minHeight: '48px' }}
+            style={{ minWidth: '52px', minHeight: '48px' }}
             title="Relatórios"
           >
             <TrendingUp size={20} />
-            <span className="text-[9px] font-bold mt-0.5">Relatórios</span>
+            <span className="text-[8px] font-bold mt-0.5 leading-none">Relatórios</span>
           </button>
  
           {/* Slot 5: Planejamento */}
           <button
             onClick={() => setActiveTab('configuracoes')}
-            className={`px-2.5 py-1.5 rounded-2xl flex flex-col items-center justify-center transition-all ${
+            className={`px-1.5 py-1.5 rounded-2xl flex flex-col items-center justify-center transition-all ${
               activeTab === 'configuracoes'
                 ? 'bg-neutral-12 text-neutral-00 shadow-sm'
                 : 'text-neutral-08 dark:text-neutral-05 hover:text-neutral-11'
             }`}
-            style={{ minWidth: '64px', minHeight: '48px' }}
+            style={{ minWidth: '52px', minHeight: '48px' }}
             title="Planejamento"
           >
             <PenLine size={20} />
-            <span className="text-[9px] font-bold mt-0.5">Planejamento</span>
+            <span className="text-[8px] font-bold mt-0.5 leading-none">Planejamento</span>
           </button>
 
           {/* Slot 6: Notas */}
           <button
             onClick={() => setActiveTab('notas')}
-            className={`px-2.5 py-1.5 rounded-2xl flex flex-col items-center justify-center transition-all ${
+            className={`px-1.5 py-1.5 rounded-2xl flex flex-col items-center justify-center transition-all ${
               activeTab === 'notas'
                 ? 'bg-neutral-12 text-neutral-00 shadow-sm'
                 : 'text-neutral-08 dark:text-neutral-05 hover:text-neutral-11'
             }`}
-            style={{ minWidth: '64px', minHeight: '48px' }}
+            style={{ minWidth: '52px', minHeight: '48px' }}
             title="Notas"
           >
             <NotebookPen size={20} />
-            <span className="text-[9px] font-bold mt-0.5">Notas</span>
+            <span className="text-[8px] font-bold mt-0.5 leading-none">Notas</span>
           </button>
         </div>
       </nav>

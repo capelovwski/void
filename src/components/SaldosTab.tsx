@@ -337,7 +337,7 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
 
             // Padding blocks
             for (let i = 0; i < startDayOfWeek; i++) {
-              dayBlocks.push(<div key={`empty-${i}`} className="h-full min-h-24 border border-transparent" />);
+              dayBlocks.push(<div key={`empty-${i}`} className="aspect-square tablet:aspect-auto tablet:h-full tablet:min-h-24 border border-transparent" />);
             }
 
             // Render Days
@@ -379,22 +379,29 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
                   onClick={() => {
                     onAddTransactionClick(dateStr);
                   }}
-                  className={`rounded-xl flex flex-col justify-between text-left transition-all h-full min-h-24 p-2 ${heatmapClass} ${presentBorder} ${temporalOpacity}`}
+                  className={`rounded-xl flex flex-col text-left transition-all aspect-square tablet:aspect-auto tablet:h-full tablet:min-h-24 p-1 tablet:p-2 items-center tablet:items-stretch justify-center tablet:justify-between gap-0.5 tablet:gap-0 ${heatmapClass} ${presentBorder} ${temporalOpacity}`}
                 >
-                  <div className="flex items-center justify-between w-full">
-                    <span className={`text-xs font-black ${
-                      isToday 
-                        ? (theme === 'dark' 
-                            ? 'bg-main text-zinc-950 w-5.5 h-5.5 rounded-full flex items-center justify-center shadow-sm' 
-                            : 'bg-neutral-12 text-neutral-00 w-5.5 h-5.5 rounded-full flex items-center justify-center shadow-sm') 
+                  <div className="flex items-center justify-center tablet:justify-between w-full">
+                    <span className={`text-[11px] tablet:text-xs font-black ${
+                      isToday
+                        ? (theme === 'dark'
+                            ? 'bg-main text-zinc-950 w-5 h-5 tablet:w-5.5 tablet:h-5.5 rounded-full flex items-center justify-center shadow-sm'
+                            : 'bg-neutral-12 text-neutral-00 w-5 h-5 tablet:w-5.5 tablet:h-5.5 rounded-full flex items-center justify-center shadow-sm')
                         : ''
                     }`}>
                       {day}
                     </span>
                   </div>
 
+                  {/* Mobile: indicador discreto de que o dia tem lançamentos.
+                      A lista detalhada não cabe numa célula de ~40px, então
+                      fica só a partir do tablet (o toque abre o lançamento). */}
+                  {dayTransactionsCount > 0 && (
+                    <span className="tablet:hidden w-1 h-1 rounded-full bg-current opacity-60 flex-shrink-0" />
+                  )}
+
                   {/* Day's transactions list (neat & legible values) */}
-                  <div className="w-full my-1.5 flex flex-col gap-0.5 overflow-hidden">
+                  <div className="hidden tablet:flex w-full my-1.5 flex-col gap-0.5 overflow-hidden">
                     {dayTransactions.slice(0, 2).map((t, idx) => {
                       const isExpense = t.type === 'saida' || t.type === 'fatura';
                       return (
@@ -423,8 +430,12 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
                   </div>
                   
                   {/* Projected Balance Display */}
-                  <div className="w-full text-right overflow-hidden border-t border-neutral-02/30 pt-1 mt-1">
-                    <span className="font-black font-albert-sans block truncate text-xs tablet:text-sm text-neutral-11">
+                  <div className="w-full text-center tablet:text-right overflow-hidden tablet:border-t tablet:border-neutral-02/30 tablet:pt-1 tablet:mt-1">
+                    {/* Mobile: formato compacto — "R$ -1.250" não cabe em ~40px */}
+                    <span className="tablet:hidden font-black font-albert-sans block text-[9px] leading-none text-neutral-11">
+                      {formatCompactBalance(dayBalance)}
+                    </span>
+                    <span className="hidden tablet:block font-black font-albert-sans truncate text-xs tablet:text-sm text-neutral-11">
                       R$ {Math.round(dayBalance).toLocaleString('pt-BR')}
                     </span>
                   </div>
@@ -439,14 +450,15 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
                 </h3>
                 
                 {/* Weekday headers */}
-                <div className="grid grid-cols-7 gap-1.5 text-center text-[10px] font-semibold text-neutral-08 uppercase mb-1.5">
+                <div className="grid grid-cols-7 gap-1 tablet:gap-1.5 text-center text-[9px] tablet:text-[10px] font-semibold text-neutral-08 uppercase mb-1.5">
                   {weekHeaders.map((h) => (
                     <div key={h}>{h}</div>
                   ))}
                 </div>
 
-                {/* Day grid */}
-                <div className="grid grid-cols-7 gap-1.5 flex-1">
+                {/* Day grid — no mobile as linhas seguem o aspect-square das
+                    células; a partir do tablet voltam a preencher o card. */}
+                <div className="grid grid-cols-7 gap-1 tablet:gap-1.5 tablet:flex-1">
                   {dayBlocks}
                 </div>
               </div>
