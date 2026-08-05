@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  ArrowUpRight, ArrowDownRight, CreditCard, PiggyBank, Target, 
-  GripVertical, SlidersHorizontal, ArrowUp, ArrowDown, Maximize2, Minimize2, Briefcase,
-  TrendingUp, Plus, Trash2, Edit2, X, Check
+import React, { useState } from 'react';
+import {
+  ArrowUpRight, ArrowDownRight, CreditCard, PiggyBank, Target,
+  GripVertical, SlidersHorizontal, Maximize2, Minimize2, Briefcase,
+  TrendingUp, Plus, Trash2, Edit2, X
 } from 'lucide-react';
 import { Reorder, useDragControls } from 'framer-motion';
 import type { Transaction, Tag, Bank } from '../types';
@@ -101,7 +101,6 @@ export const RelatoriosTab: React.FC<RelatoriosTabProps> = ({
   const gridLineColor = isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E5E5';
   const axisColor = isDark ? 'rgba(255, 255, 255, 0.2)' : '#AEAEAE';
   const textFillColor = isDark ? '#A3A3A3' : '#605F5F'; // neutral-06 / neutral-10
-  const lineColor = isDark ? '#FAFAFA' : '#1A1A1A'; // neutral-11
   const donutBgColor = isDark ? 'rgba(255, 255, 255, 0.06)' : '#EEEEEE';
   // 1. Core Financial Calculations
   const sumByType = (type: Transaction['type']) => {
@@ -322,30 +321,6 @@ export const RelatoriosTab: React.FC<RelatoriosTabProps> = ({
       ...prev,
       [id]: prev[id] === 'full' ? 'half' : 'full',
     }));
-  };
-
-  // HTML5 Drag and Drop handlers
-  const handleDragStart = (e: React.DragEvent, id: string) => {
-    e.dataTransfer.setData('text/plain', id);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-
-  const handleDrop = (e: React.DragEvent, targetId: string) => {
-    e.preventDefault();
-    const sourceId = e.dataTransfer.getData('text/plain');
-    if (sourceId === targetId) return;
-
-    const newOrder = [...widgetOrder];
-    const sourceIndex = newOrder.indexOf(sourceId);
-    const targetIndex = newOrder.indexOf(targetId);
-    if (sourceIndex === -1 || targetIndex === -1) return;
-
-    newOrder[sourceIndex] = targetId;
-    newOrder[targetIndex] = sourceId;
-    setWidgetOrder(newOrder);
   };
 
   const getWidgetLabel = (id: string) => {

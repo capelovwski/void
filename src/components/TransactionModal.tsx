@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
 import { X, Calendar, Tag as TagIcon, FileText, Briefcase } from 'lucide-react';
 import type { Transaction, TransactionType, Tag } from '../types';
 import { CATEGORY_ICONS } from './PlanejamentoTab';
@@ -94,7 +94,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     visible: { opacity: 1 }
   };
 
-  const modalVariants = {
+  const modalVariants: Variants = {
     hidden: { 
       y: isMobile ? "100%" : 20,
       scale: isMobile ? 1 : 0.95,
@@ -171,7 +171,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         drag={isMobile ? "y" : false}
         dragConstraints={{ top: 0 }}
         dragElastic={{ top: 0, bottom: 0.5 }}
-        onDragEnd={(event, info) => {
+        onDragEnd={(_event, info) => {
           if (info.offset.y > 150) {
             onClose();
           }
