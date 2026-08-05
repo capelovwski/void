@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, initializeAuth, indexedDBLocalPersistence, type Auth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { Capacitor } from '@capacitor/core';
 
 // ============================================================================
 // CONFIGURAÇÃO DO FIREBASE
@@ -31,5 +32,13 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-export const auth = getAuth(app);
+// No WebView nativo (Capacitor/iOS) o getAuth() padrão não consegue
+// inicializar a persistência sob o esquema capacitor:// — o
+// onAuthStateChanged nunca dispara e o app trava na tela de carregamento.
+// Declarar o IndexedDB explicitamente resolve. No navegador seguimos com
+// getAuth(), que já detecta o melhor mecanismo sozinho.
+export const auth: Auth = Capacitor.isNativePlatform()
+  ? initializeAuth(app, { persistence: indexedDBLocalPersistence })
+  : getAuth(app);
+
 export const db = getFirestore(app);
