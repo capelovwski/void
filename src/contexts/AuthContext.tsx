@@ -58,7 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await createUserWithEmailAndPassword(auth, email, password);
     } catch (error) {
-      throw new Error(translateAuthError(error));
+      throw new Error(translateAuthError(error), { cause: error });
     }
   };
 
@@ -66,7 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
-      throw new Error(translateAuthError(error));
+      throw new Error(translateAuthError(error), { cause: error });
     }
   };
 

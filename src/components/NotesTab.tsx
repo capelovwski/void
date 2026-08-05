@@ -2,40 +2,17 @@ import React, { useState } from 'react';
 import { NotebookPen, Plus, Pencil, Trash2, Check, X, LogOut, CircleAlert } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotes } from '../hooks/useNotes';
-import { AuthScreen } from './auth/AuthScreen';
 
 export const NotesTab: React.FC = () => {
-  const { user, loading: authLoading, logout } = useAuth();
+  // App.tsx só renderiza as abas depois que o usuário está autenticado,
+  // então aqui `user` sempre existe.
+  const { user, logout } = useAuth();
   const { notes, loading: notesLoading, error, addNote, updateNote, deleteNote } = useNotes(user?.uid ?? null);
 
   const [newNoteText, setNewNoteText] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
-
-  if (authLoading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <span className="w-6 h-6 border-2 border-neutral-08 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  // Área exclusiva: só aparece depois que o usuário está autenticado.
-  if (!user) {
-    return (
-      <div className="space-y-6 pb-24 animate-appear max-w-5xl mx-auto w-full">
-        <div className="bg-neutral-00 p-6 rounded-2xl border border-neutral-03/80 shadow-sm">
-          <h2 className="text-xl font-bold font-albert-sans text-neutral-11 flex items-center gap-2">
-            <NotebookPen size={20} className="text-neutral-08" />
-            Anotações
-          </h2>
-          <p className="text-xs text-neutral-08 mt-1">Faça login ou cadastre-se para ver e criar suas anotações pessoais.</p>
-        </div>
-        <AuthScreen />
-      </div>
-    );
-  }
 
   const handleAddNote = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,7 +60,7 @@ export const NotesTab: React.FC = () => {
             <NotebookPen size={20} className="text-neutral-08" />
             Anotações
           </h2>
-          <p className="text-xs text-neutral-08 mt-1">Logado como {user.email}</p>
+          <p className="text-xs text-neutral-08 mt-1">Logado como {user?.email}</p>
         </div>
         <button
           onClick={() => logout()}

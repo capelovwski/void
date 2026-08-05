@@ -23,6 +23,10 @@ export function useNotes(userId: string | null) {
 
   useEffect(() => {
     if (!userId) {
+      // Reseta o espelho local quando o usuário desloga — não há um
+      // "getSnapshot" síncrono do Firestore para calcular isso durante o
+      // render, então o reset acontece aqui mesmo.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setNotes([]);
       setLoading(false);
       return;

@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Wallet, List, Plus, TrendingUp, PenLine, Bell, User, NotebookPen } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import type { Transaction, Tag, PlanningConfig, RealSpends, Bank } from './types';
-import { DEFAULT_TAGS, DEFAULT_PLANNING_CONFIG, getMockRealSpends, getMockTransactions } from './utils/mockData';
+import { DEFAULT_TAGS } from './utils/mockData';
 import { useAuth } from './contexts/AuthContext';
+import { useUserCollection } from './hooks/useUserCollection';
+import { useFinanceSettings } from './hooks/useFinanceSettings';
 
 // Tabs import
 import { SaldosTab } from './components/SaldosTab';
@@ -14,6 +16,7 @@ import { PerfilTab } from './components/PerfilTab';
 import { NotesTab } from './components/NotesTab';
 import { ParticleBackground } from './components/ParticleBackground';
 import { TransactionModal } from './components/TransactionModal';
+import { AuthScreen } from './components/auth/AuthScreen';
 
 import voidDarkModeLogo from '../logo/void-dark-mode.svg';
 import voidLightModeLogo from '../logo/void-light-mode.svg';
@@ -36,7 +39,8 @@ function App() {
     return (localStorage.getItem('saldos_theme') === 'light' ? 'light' : 'dark');
   });
 
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const userId = user?.uid ?? null;
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([
@@ -56,101 +60,108 @@ function App() {
     }
   }, [theme]);
 
-  // 3. Financial States
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [tags, setTags] = useState<Tag[]>([]);
-  const [initialBalance, setInitialBalance] = useState<number>(2000); // balance at start of month
-  const [planningConfig, setPlanningConfig] = useState<PlanningConfig>(DEFAULT_PLANNING_CONFIG);
-  const [realSpends, setRealSpends] = useState<RealSpends>({});
-  const [banks, setBanks] = useState<Bank[]>([]);
+  // 3. Financial States (Firestore, isolados por usuário)
+  const {
+    items: transactions,
+    loading: transactionsLoading,
+    addItem: addTransactionDoc,
+    setItem: setTransactionDoc,
+    removeItem: removeTransactionDoc,
+  } = useUserCollection<Transaction>(userId, 'transactions');
 
-  const persistBanks = (newBanks: Bank[]) => {
-    setBanks(newBanks);
-    localStorage.setItem('void_banks', JSON.stringify(newBanks));
+  const {
+    items: tags,
+    loading: tagsLoading,
+    addItem: addTagDoc,
+    setItem: setTagDoc,
+    removeItem: removeTagDoc,
+  } = useUserCollection<Tag>(userId, 'tags');
+
+  const {
+    items: banks,
+    loading: banksLoading,
+    addItem: addBankDoc,
+    setItem: setBankDoc,
+    removeItem: removeBankDoc,
+  } = useUserCollection<Bank>(userId, 'banks');
+
+  const { settings, loading: settingsLoading, updateSettings } = useFinanceSettings(userId);
+
+  const financeDataLoading = transactionsLoading || tagsLoading || banksLoading || settingsLoading;
+  const initialBalance = settings?.initialBalance ?? 0;
+  const planningConfig: PlanningConfig = settings?.planningConfig ?? { fixedRevenue: 0, fixedExpenses: [] };
+  const realSpends: RealSpends = settings?.realSpends ?? {};
+
+  const persistBanks = async (newBanks: Bank[]) => {
+    const newIds = new Set(newBanks.map((b) => b.id));
+    const removedBanks = banks.filter((b) => !newIds.has(b.id));
+    await Promise.all(removedBanks.map((b) => removeBankDoc(b.id)));
+    await Promise.all(newBanks.map((b) => setBankDoc(b)));
+
     const newTotal = newBanks.reduce((sum, b) => sum + b.balance, 0);
-    setInitialBalance(newTotal);
-    localStorage.setItem('saldos_initial_balance', newTotal.toString());
+    await updateSettings({ initialBalance: newTotal });
   };
-
 
   // 4. Modal Toggles
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [modalDefaultDate, setModalDefaultDate] = useState<string>('');
 
-  // 4. Initial Load (LocalStorage Check)
+  // Migração/seed única: na primeira carga de uma conta sem nenhum dado no
+  // Firestore, tenta migrar dados antigos salvos no localStorage (de quando
+  // o app não tinha login); se não houver nada, cria só as tags padrão e um
+  // documento de configurações neutro (sem dados fictícios).
+  const seededRef = useRef(false);
   useEffect(() => {
-    const savedTransactions = localStorage.getItem('saldos_transactions');
-    const savedTags = localStorage.getItem('saldos_tags');
-    const savedBalance = localStorage.getItem('saldos_initial_balance');
-    const savedPlanning = localStorage.getItem('saldos_planning_config');
-    const savedRealSpends = localStorage.getItem('saldos_real_spends');
-    const savedBanks = localStorage.getItem('void_banks');
+    if (!userId || financeDataLoading || seededRef.current) return;
 
-    if (savedTransactions && savedTags && savedBalance && savedPlanning && savedRealSpends) {
-      setTransactions(JSON.parse(savedTransactions));
-      setTags(JSON.parse(savedTags));
-      setInitialBalance(parseFloat(savedBalance));
-      setPlanningConfig(JSON.parse(savedPlanning));
-      setRealSpends(JSON.parse(savedRealSpends));
-      if (savedBanks) {
-        setBanks(JSON.parse(savedBanks));
+    const hasCloudData = transactions.length > 0 || tags.length > 0 || banks.length > 0 || settings !== null;
+    seededRef.current = true;
+    if (hasCloudData) return;
+
+    (async () => {
+      const legacyTransactions = localStorage.getItem('saldos_transactions');
+      const legacyTags = localStorage.getItem('saldos_tags');
+      const legacyBanks = localStorage.getItem('void_banks');
+      const legacyPlanning = localStorage.getItem('saldos_planning_config');
+      const legacyRealSpends = localStorage.getItem('saldos_real_spends');
+      const legacyBalance = localStorage.getItem('saldos_initial_balance');
+
+      if (legacyTransactions || legacyTags || legacyBanks) {
+        if (legacyTransactions) {
+          await Promise.all((JSON.parse(legacyTransactions) as Transaction[]).map((t) => setTransactionDoc(t)));
+        }
+        if (legacyTags) {
+          await Promise.all((JSON.parse(legacyTags) as Tag[]).map((t) => setTagDoc(t)));
+        }
+        if (legacyBanks) {
+          await Promise.all((JSON.parse(legacyBanks) as Bank[]).map((b) => setBankDoc(b)));
+        }
+        await updateSettings({
+          initialBalance: legacyBalance ? parseFloat(legacyBalance) : 0,
+          planningConfig: legacyPlanning ? JSON.parse(legacyPlanning) : { fixedRevenue: 0, fixedExpenses: [] },
+          realSpends: legacyRealSpends ? JSON.parse(legacyRealSpends) : {},
+        });
       } else {
-        const balVal = parseFloat(savedBalance);
-        const defaultBanks = [
-          { id: 'b1', name: 'Nubank', color: '#8A05BE', balance: Math.round(balVal * 0.4 * 100) / 100 },
-          { id: 'b2', name: 'Itaú', color: '#EC7000', balance: Math.round(balVal * 0.35 * 100) / 100 },
-          { id: 'b3', name: 'XP Investimentos', color: '#FFC000', balance: Math.round(balVal * 0.25 * 100) / 100 }
-        ];
-        setBanks(defaultBanks);
-        localStorage.setItem('void_banks', JSON.stringify(defaultBanks));
+        await Promise.all(DEFAULT_TAGS.map((t) => setTagDoc(t)));
+        await updateSettings({
+          initialBalance: 0,
+          planningConfig: { fixedRevenue: 0, fixedExpenses: [] },
+          realSpends: {},
+        });
       }
-    } else {
-      // Seed default mock data
-      const mockTrans = getMockTransactions();
-      const mockSpends = getMockRealSpends();
-      const defaultBanks = [
-        { id: 'b1', name: 'Nubank', color: '#8A05BE', balance: 800 },
-        { id: 'b2', name: 'Itaú', color: '#EC7000', balance: 700 },
-        { id: 'b3', name: 'XP Investimentos', color: '#FFC000', balance: 500 }
-      ];
-      
-      setTransactions(mockTrans);
-      setTags(DEFAULT_TAGS);
-      setInitialBalance(2000);
-      setPlanningConfig(DEFAULT_PLANNING_CONFIG);
-      setRealSpends(mockSpends);
-      setBanks(defaultBanks);
-
-      localStorage.setItem('saldos_transactions', JSON.stringify(mockTrans));
-      localStorage.setItem('saldos_tags', JSON.stringify(DEFAULT_TAGS));
-      localStorage.setItem('saldos_initial_balance', '2000');
-      localStorage.setItem('saldos_planning_config', JSON.stringify(DEFAULT_PLANNING_CONFIG));
-      localStorage.setItem('saldos_real_spends', JSON.stringify(mockSpends));
-      localStorage.setItem('void_banks', JSON.stringify(defaultBanks));
-    }
-  }, []);
+    })();
+  }, [userId, financeDataLoading, transactions.length, tags.length, banks.length, settings]);
 
   // 5. State Persistence Helpers
-  const persistTransactions = (newTransactions: Transaction[]) => {
-    setTransactions(newTransactions);
-    localStorage.setItem('saldos_transactions', JSON.stringify(newTransactions));
-  };
-
-  const persistTags = (newTags: Tag[]) => {
-    setTags(newTags);
-    localStorage.setItem('saldos_tags', JSON.stringify(newTags));
-  };
-
-  const persistBalance = (newBalance: number) => {
-    setInitialBalance(newBalance);
-    localStorage.setItem('saldos_initial_balance', newBalance.toString());
+  const persistBalance = async (newBalance: number) => {
+    await updateSettings({ initialBalance: newBalance });
 
     // Scale banks proportionally to match new total balance
     if (banks.length > 0) {
       const currentTotal = banks.reduce((sum, b) => sum + b.balance, 0);
       const ratio = currentTotal > 0 ? newBalance / currentTotal : 0;
-      
+
       const scaledBanks = banks.map((b, idx) => {
         if (idx === banks.length - 1) {
           // Adjust last bank to avoid rounding errors
@@ -159,71 +170,47 @@ function App() {
         }
         return { ...b, balance: Math.round(b.balance * ratio * 100) / 100 };
       });
-      setBanks(scaledBanks);
-      localStorage.setItem('void_banks', JSON.stringify(scaledBanks));
+      await Promise.all(scaledBanks.map((b) => setBankDoc(b)));
     } else {
       // If no banks, create a default cash/general bank
-      const newBanks = [{ id: 'b-general', name: 'Saldo Geral', color: '#8F8F9B', balance: newBalance }];
-      setBanks(newBanks);
-      localStorage.setItem('void_banks', JSON.stringify(newBanks));
+      await addBankDoc({ name: 'Saldo Geral', color: '#8F8F9B', balance: newBalance });
     }
   };
 
-  const persistPlanningConfig = (newConfig: PlanningConfig) => {
-    setPlanningConfig(newConfig);
-    localStorage.setItem('saldos_planning_config', JSON.stringify(newConfig));
+  const persistPlanningConfig = async (newConfig: PlanningConfig) => {
+    await updateSettings({ planningConfig: newConfig });
   };
 
-  const handleUpdateRealSpend = (dateStr: string, value: number) => {
-    const updated = {
-      ...realSpends,
-      [dateStr]: value,
-    };
-    setRealSpends(updated);
-    localStorage.setItem('saldos_real_spends', JSON.stringify(updated));
+  const handleUpdateRealSpend = async (dateStr: string, value: number) => {
+    await updateSettings({ realSpends: { ...realSpends, [dateStr]: value } });
   };
 
   // 6. CRUD Operations
-  const handleSaveTransaction = (transactionData: Omit<Transaction, 'id'> & { id?: string }) => {
+  const handleSaveTransaction = async (transactionData: Omit<Transaction, 'id'> & { id?: string }) => {
     if (transactionData.id) {
-      const updated = transactions.map((t) =>
-        t.id === transactionData.id ? (transactionData as Transaction) : t
-      );
-      persistTransactions(updated);
+      await setTransactionDoc(transactionData as Transaction);
     } else {
-      const newTransaction: Transaction = {
-        ...transactionData,
-        id: `t-${Date.now()}`,
-      };
-      persistTransactions([...transactions, newTransaction]);
+      await addTransactionDoc(transactionData);
     }
     setEditingTransaction(null);
   };
 
-  const handleDeleteTransaction = (id: string) => {
-    const filtered = transactions.filter((t) => t.id !== id);
-    persistTransactions(filtered);
+  const handleDeleteTransaction = async (id: string) => {
+    await removeTransactionDoc(id);
     if (editingTransaction?.id === id) {
       setEditingTransaction(null);
     }
   };
 
-  const handleAddTag = (tagData: Omit<Tag, 'id'>) => {
-    const newTag: Tag = {
-      ...tagData,
-      id: `tag-${Date.now()}`,
-    };
-    persistTags([...tags, newTag]);
+  const handleAddTag = async (tagData: Omit<Tag, 'id'>) => {
+    await addTagDoc(tagData);
   };
 
-  const handleDeleteTag = (tagId: string) => {
-    const filteredTags = tags.filter((t) => t.id !== tagId);
-    persistTags(filteredTags);
+  const handleDeleteTag = async (tagId: string) => {
+    await removeTagDoc(tagId);
 
-    const updatedTransactions = transactions.map((t) =>
-      t.tagId === tagId ? { ...t, tagId: undefined } : t
-    );
-    persistTransactions(updatedTransactions);
+    const affected = transactions.filter((t) => t.tagId === tagId);
+    await Promise.all(affected.map((t) => setTransactionDoc({ ...t, tagId: undefined })));
   };
 
   // Triggers
@@ -291,6 +278,41 @@ function App() {
   };
 
   const dailyBalances = calculateDailyBalances();
+
+  // Dados financeiros agora vivem no Firestore por usuário, então o app
+  // inteiro exige login antes de mostrar qualquer tela.
+  if (authLoading) {
+    return (
+      <div className="h-[100dvh] flex items-center justify-center bg-bg-01">
+        <span className="w-8 h-8 border-2 border-neutral-08 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="h-[100dvh] flex items-center justify-center bg-bg-01 p-4">
+        <div className="w-full max-w-md space-y-6">
+          <div className="flex justify-center">
+            <img
+              src={theme === 'dark' ? voidDarkModeLogo : voidLightModeLogo}
+              alt="Void"
+              className="h-12 w-auto object-contain"
+            />
+          </div>
+          <AuthScreen />
+        </div>
+      </div>
+    );
+  }
+
+  if (financeDataLoading || !settings) {
+    return (
+      <div className="h-[100dvh] flex items-center justify-center bg-bg-01">
+        <span className="w-8 h-8 border-2 border-neutral-08 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="h-[100dvh] desktop:h-auto desktop:min-h-screen bg-bg-01 flex flex-col font-geist relative overflow-hidden desktop:overflow-visible">
