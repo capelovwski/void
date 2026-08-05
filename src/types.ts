@@ -36,3 +36,10 @@ export interface Bank {
   balance: number;
 }
 
+export interface Note {
+  id: string;
+  text: string;
+  createdAt: number; // timestamp em milissegundos
+  userId: string;
+}
+

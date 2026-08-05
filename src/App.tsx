@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Wallet, List, Plus, TrendingUp, PenLine, Bell, User } from 'lucide-react';
+import { Wallet, List, Plus, TrendingUp, PenLine, Bell, User, NotebookPen } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import type { Transaction, Tag, PlanningConfig, RealSpends, Bank } from './types';
 import { DEFAULT_TAGS, DEFAULT_PLANNING_CONFIG, getMockRealSpends, getMockTransactions } from './utils/mockData';
+import { useAuth } from './contexts/AuthContext';
 
 // Tabs import
 import { SaldosTab } from './components/SaldosTab';
@@ -10,6 +11,7 @@ import { TransacoesTab } from './components/TransacoesTab';
 import { RelatoriosTab } from './components/RelatoriosTab';
 import { PlanejamentoTab } from './components/PlanejamentoTab';
 import { PerfilTab } from './components/PerfilTab';
+import { NotesTab } from './components/NotesTab';
 import { ParticleBackground } from './components/ParticleBackground';
 import { TransactionModal } from './components/TransactionModal';
 
@@ -25,25 +27,16 @@ interface AppNotification {
   read: boolean;
 }
 
-interface UserProfile {
-  name: string;
-  email: string;
-  avatarUrl: string;
-}
-
 function App() {
   // 1. App Navigation State
-  const [activeTab, setActiveTab] = useState<'saldos' | 'transacoes' | 'relatorios' | 'configuracoes' | 'perfil'>('saldos');
+  const [activeTab, setActiveTab] = useState<'saldos' | 'transacoes' | 'relatorios' | 'configuracoes' | 'notas' | 'perfil'>('saldos');
 
-  // 2. Theme & User Profiling
+  // 2. Theme & Auth
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     return (localStorage.getItem('saldos_theme') === 'light' ? 'light' : 'dark');
   });
 
-  const [user, setUser] = useState<UserProfile | null>(() => {
-    const saved = localStorage.getItem('saldos_user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const { user } = useAuth();
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([
@@ -62,24 +55,6 @@ function App() {
       root.classList.remove('light');
     }
   }, [theme]);
-
-  const handleLogin = (newUser: UserProfile) => {
-    setUser(newUser);
-    localStorage.setItem('saldos_user', JSON.stringify(newUser));
-    setNotifications(prev => [
-      { id: `n-login-${Date.now()}`, message: `Sessão iniciada como ${newUser.name}. Seus dados estão sincronizados!`, date: 'Agora', read: false },
-      ...prev
-    ]);
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-    localStorage.removeItem('saldos_user');
-    setNotifications(prev => [
-      { id: `n-logout-${Date.now()}`, message: 'Sessão encerrada. Suas alterações continuarão salvas localmente.', date: 'Agora', read: false },
-      ...prev
-    ]);
-  };
 
   // 3. Financial States
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -395,6 +370,21 @@ function App() {
             </span>
           </button>
 
+          {/* Notas */}
+          <button
+            onClick={() => setActiveTab('notas')}
+            className={`flex items-center w-full px-3 py-3 rounded-2xl transition-all ${
+              activeTab === 'notas'
+                ? 'bg-neutral-12 text-neutral-00 shadow-sm'
+                : 'text-neutral-08 hover:text-neutral-11 hover:bg-neutral-02/60'
+            }`}
+          >
+            <NotebookPen size={20} className="flex-shrink-0 mx-auto group-hover:mx-0" />
+            <span className="text-xs font-semibold group-hover:ml-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap overflow-hidden w-0 group-hover:w-auto">
+              Notas
+            </span>
+          </button>
+
           {/* Perfil */}
           <button
             onClick={() => setActiveTab('perfil')}
@@ -496,7 +486,7 @@ function App() {
             title="Perfil do Usuário"
           >
             {user ? (
-              <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+              <span className="text-xs font-bold text-neutral-11 uppercase">{user.email?.charAt(0) ?? '?'}</span>
             ) : (
               <User size={16} />
             )}
@@ -549,13 +539,12 @@ function App() {
           />
         )}
 
+        {activeTab === 'notas' && <NotesTab />}
+
         {activeTab === 'perfil' && (
           <PerfilTab
             theme={theme}
             setTheme={setTheme}
-            user={user}
-            onLogin={handleLogin}
-            onLogout={handleLogout}
           />
         )}
       </main>
@@ -633,6 +622,21 @@ function App() {
           >
             <PenLine size={20} />
             <span className="text-[9px] font-bold mt-0.5">Planejamento</span>
+          </button>
+
+          {/* Slot 6: Notas */}
+          <button
+            onClick={() => setActiveTab('notas')}
+            className={`px-2.5 py-1.5 rounded-2xl flex flex-col items-center justify-center transition-all ${
+              activeTab === 'notas'
+                ? 'bg-neutral-12 text-neutral-00 shadow-sm'
+                : 'text-neutral-08 dark:text-neutral-05 hover:text-neutral-11'
+            }`}
+            style={{ minWidth: '64px', minHeight: '48px' }}
+            title="Notas"
+          >
+            <NotebookPen size={20} />
+            <span className="text-[9px] font-bold mt-0.5">Notas</span>
           </button>
         </div>
       </nav>

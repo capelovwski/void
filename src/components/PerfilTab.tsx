@@ -1,41 +1,18 @@
 import React, { useState } from 'react';
-import { User, LogIn, LogOut, HelpCircle, Moon, Sun, Shield, BookOpen, Layers, PiggyBank, CircleAlert } from 'lucide-react';
-
-interface UserProfile {
-  name: string;
-  email: string;
-  avatarUrl: string;
-}
+import { User, LogOut, HelpCircle, Moon, Sun, Shield, BookOpen, Layers, PiggyBank, CircleAlert, NotebookPen } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface PerfilTabProps {
   theme: 'dark' | 'light';
   setTheme: (theme: 'dark' | 'light') => void;
-  user: UserProfile | null;
-  onLogin: (user: UserProfile) => void;
-  onLogout: () => void;
 }
 
 export const PerfilTab: React.FC<PerfilTabProps> = ({
   theme,
   setTheme,
-  user,
-  onLogin,
-  onLogout,
 }) => {
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const { user, logout } = useAuth();
   const [openTutorialSection, setOpenTutorialSection] = useState<string | null>('balances');
-
-  const handleGoogleLogin = () => {
-    setIsLoggingIn(true);
-    setTimeout(() => {
-      onLogin({
-        name: 'Pedro Silva',
-        email: 'pedro.silva@gmail.com',
-        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256&h=256',
-      });
-      setIsLoggingIn(false);
-    }, 1200);
-  };
 
   const toggleSection = (section: string) => {
     setOpenTutorialSection(openTutorialSection === section ? null : section);
@@ -71,22 +48,19 @@ export const PerfilTab: React.FC<PerfilTabProps> = ({
               // Connected State
               <div className="flex flex-col tablet:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-neutral-01 border border-neutral-02">
                 <div className="flex items-center gap-4">
-                  <img
-                    src={user.avatarUrl}
-                    alt={user.name}
-                    className="w-14 h-14 rounded-full border-2 border-main object-cover"
-                  />
+                  <div className="w-14 h-14 rounded-full border-2 border-main bg-neutral-02 flex items-center justify-center text-neutral-11 font-bold text-lg uppercase flex-shrink-0">
+                    {user.email?.charAt(0) ?? '?'}
+                  </div>
                   <div className="text-center tablet:text-left">
-                    <h4 className="text-sm font-bold text-neutral-11">{user.name}</h4>
-                    <p className="text-xs text-neutral-08">{user.email}</p>
+                    <h4 className="text-sm font-bold text-neutral-11">{user.email}</h4>
                     <span className="inline-block text-[9px] bg-success/20 text-success border border-success/30 px-2 py-0.5 rounded-full font-bold mt-1">
-                      Conectado via Google
+                      Conectado
                     </span>
                   </div>
                 </div>
 
                 <button
-                  onClick={onLogout}
+                  onClick={() => logout()}
                   className="btn-outline px-4 py-2.5 text-xs rounded-xl flex items-center gap-2 hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/20"
                 >
                   <LogOut size={14} />
@@ -100,24 +74,11 @@ export const PerfilTab: React.FC<PerfilTabProps> = ({
                   <User size={32} />
                 </div>
                 <div className="space-y-1 max-w-sm">
-                  <h4 className="text-sm font-bold text-neutral-11">Sincronize seus dados na Nuvem</h4>
-                  <p className="text-xs text-neutral-08">
-                    Faça login com sua Conta Google para salvar suas transações e metas de forma segura.
+                  <h4 className="text-sm font-bold text-neutral-11">Você ainda não está conectado</h4>
+                  <p className="text-xs text-neutral-08 flex items-center justify-center gap-1 flex-wrap">
+                    Vá até a aba <NotebookPen size={12} className="inline text-neutral-10" /> <strong>Notas</strong> para criar sua conta ou fazer login com e-mail e senha.
                   </p>
                 </div>
-
-                <button
-                  onClick={handleGoogleLogin}
-                  disabled={isLoggingIn}
-                  className="btn-filled text-xs px-6 py-3 rounded-xl flex items-center gap-2"
-                >
-                  {isLoggingIn ? (
-                    <span className="w-4 h-4 border-2 border-neutral-00 border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <LogIn size={15} />
-                  )}
-                  {isLoggingIn ? 'Conectando ao Google...' : 'Fazer login com o Google'}
-                </button>
               </div>
             )}
           </div>
