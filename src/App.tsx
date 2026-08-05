@@ -514,6 +514,8 @@ function App() {
             onAddTransactionClick={openNewTransactionModal}
             dailyBalances={dailyBalances}
             theme={theme}
+            dailyBaseSpend={dailyBaseSpend}
+            onGoToPlanning={() => setActiveTab('configuracoes')}
           />
         )}
 

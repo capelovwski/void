@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, CircleAlert } from 'lucide-react';
 import type { Transaction, Tag } from '../types';
 
 interface SaldosTabProps {
@@ -8,6 +8,8 @@ interface SaldosTabProps {
   onAddTransactionClick: (date?: string) => void;
   dailyBalances: Record<string, number>;
   theme: 'dark' | 'light';
+  dailyBaseSpend: number;
+  onGoToPlanning: () => void;
 }
 
 const formatCompactBalance = (val: number): string => {
@@ -34,6 +36,8 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
   onAddTransactionClick,
   dailyBalances,
   theme,
+  dailyBaseSpend,
+  onGoToPlanning,
 }) => {
   const todayStr = new Date().toISOString().split('T')[0];
   const [calendarView, setCalendarView] = useState<'1month' | '3months'>('1month');
@@ -120,6 +124,23 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Sem receita fixa cadastrada o gasto diário base é zero, e a projeção
+          fica "parada" nos dias futuros — o que parece um bug. Avisa e leva
+          direto para onde se configura. */}
+      {dailyBaseSpend === 0 && (
+        <button
+          onClick={onGoToPlanning}
+          className="w-full flex items-start gap-2 p-3 rounded-xl bg-main/10 border border-main/25 text-left transition-colors hover:bg-main/15"
+        >
+          <CircleAlert size={14} className="text-main flex-shrink-0 mt-0.5" />
+          <span className="text-[11px] text-neutral-10 leading-relaxed">
+            <strong className="text-neutral-11">Gasto diário base zerado.</strong> Cadastre sua
+            receita mensal em <strong className="text-neutral-11">Planejamento</strong> para o saldo
+            projetar os dias futuros.
+          </span>
+        </button>
+      )}
 
       {/* Calendar Grid Container / Timeline Container */}
       {calendarView === '3months' ? (
