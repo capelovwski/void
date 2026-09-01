@@ -241,7 +241,7 @@ export const PlanejamentoTab: React.FC<PlanejamentoTabProps> = ({
           <div className="card-premium p-5 space-y-4">
             <div className="flex items-center gap-2 text-neutral-11 border-b border-neutral-02 pb-3">
               <Target size={18} className="text-neutral-08" />
-              <h3 className="text-base font-bold font-albert-sans">Previsão de diário</h3>
+              <h3 className="text-base font-bold font-albert-sans">Quanto posso gastar por dia</h3>
             </div>
 
             {budgeted.length === 0 ? (

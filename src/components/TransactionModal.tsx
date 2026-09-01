@@ -11,7 +11,7 @@ import {
   splitInstallments,
   todayYMD,
 } from '../core';
-import { TRANSACTION_TYPE_LIST, typeMeta } from '../config/transactionTypes';
+import { TRANSACTION_TYPE_META, typeMeta } from '../config/transactionTypes';
 import { categoryIcon } from '../config/categoryIcons';
 import { useIsMobile } from '../hooks/useBreakpoint';
 
@@ -41,6 +41,27 @@ const RECURRENCE_OPTIONS: { value: Recurrence; label: string }[] = [
 const fieldShell =
   'relative rounded-xl border border-neutral-03 bg-neutral-01 overflow-hidden transition-colors focus-within:border-neutral-11';
 
+/**
+ * A primeira escolha é entre três coisas que qualquer um entende: entrou,
+ * saiu, guardei. "No cartão" só aparece para quem tem cartão cadastrado.
+ *
+ * Os cinco tipos do modelo continuam existindo — o que sumiu foi a exigência de
+ * escolher entre "saída" e "diário" logo de cara, sem que nada na tela dissesse
+ * qual era a diferença. Essa distinção virou uma segunda pergunta, feita só
+ * depois de "saiu" e com as duas opções escritas por extenso.
+ */
+type PrimaryChoice = 'entrada' | 'saiu' | 'economia' | 'cartao';
+
+const primaryOf = (type: TransactionType): PrimaryChoice =>
+  type === 'saida' || type === 'diario' ? 'saiu' : type;
+
+const PRIMARY_OPTIONS: { id: PrimaryChoice; label: string; meta: TransactionType }[] = [
+  { id: 'entrada', label: 'Entrou', meta: 'entrada' },
+  { id: 'saiu', label: 'Saiu', meta: 'saida' },
+  { id: 'economia', label: 'Guardei', meta: 'economia' },
+  { id: 'cartao', label: 'No cartão', meta: 'cartao' },
+];
+
 export const TransactionModal: React.FC<TransactionModalProps> = ({
   isOpen,
   onClose,
@@ -56,7 +77,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const isMobile = useIsMobile();
   const todayStr = todayYMD();
 
-  const [type, setType] = useState<TransactionType>('saida');
+  const [type, setType] = useState<TransactionType>('diario');
   const [valueInput, setValueInput] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState('');
@@ -94,7 +115,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setDueDateTouched(true);
     } else {
       const initialDate = defaultDate || todayStr;
-      setType('saida');
+      setType('diario');
       setValueInput('');
       setDescription('');
       setDate(initialDate);
@@ -122,6 +143,14 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
   const meta = typeMeta(type);
   const isCard = type === 'cartao';
+  const primary = primaryOf(type);
+
+  // Sem cartão cadastrado, "No cartão" nem aparece: seria uma quarta escolha
+  // que não leva a lugar nenhum. Continua visível ao editar um lançamento
+  // antigo de cartão, para não sumir a opção debaixo do usuário.
+  const visiblePrimary = PRIMARY_OPTIONS.filter(
+    (o) => o.id !== 'cartao' || cards.length > 0 || type === 'cartao',
+  );
   const selectedCard = useMemo(() => cards.find((c) => c.id === cardId), [cards, cardId]);
 
   /**
@@ -166,6 +195,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     } else if (!purchaseDate) {
       setPurchaseDate(date || todayStr);
     }
+  };
+
+  // "Saiu" cai em "gasto do dia" por padrão: é o caso mais comum de quem lança
+  // pelo celular. Contas fixas ficam a um toque de distância.
+  const handlePrimaryChange = (choice: PrimaryChoice) => {
+    handleTypeChange(choice === 'saiu' ? 'diario' : choice);
   };
 
   const handleQuickSpendChange = (raw: string) => {
@@ -259,12 +294,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         <div className="w-10 h-1.5 bg-neutral-03/80 rounded-full mx-auto my-3 tablet:hidden flex-shrink-0" />
 
         <div className="flex items-center justify-between px-5 tablet:px-6 pb-4 tablet:pt-6 flex-shrink-0">
-          <div>
-            <h3 className="text-lg font-semibold font-albert-sans text-neutral-11">
-              {editingTransaction ? 'Editar movimentação' : 'Nova movimentação'}
-            </h3>
-            <p className="text-[11px] text-neutral-08 mt-0.5">{meta.hint}</p>
-          </div>
+          {/* Sem subtítulo aqui: a explicação de cada tipo aparece junto da
+              escolha, e repeti-la no topo deixava a mesma frase duas vezes na tela. */}
+          <h3 className="font-albert-sans text-lg font-semibold text-neutral-11">
+            {editingTransaction ? 'Editar lançamento' : 'Novo lançamento'}
+          </h3>
           <button
             type="button"
             onClick={onClose}
@@ -293,31 +327,72 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             />
           </div>
 
-          {/* Tipo */}
+          {/* O que aconteceu com o dinheiro */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-neutral-08 uppercase tracking-wide">Tipo</label>
-            <div className="grid grid-cols-5 gap-1.5">
-              {TRANSACTION_TYPE_LIST.map((item) => {
-                const Icon = item.icon;
-                const active = type === item.value;
+            <label className="text-xs font-semibold uppercase tracking-wide text-neutral-08">
+              O que aconteceu
+            </label>
+            <div className={`grid gap-1.5 ${visiblePrimary.length === 4 ? 'grid-cols-4' : 'grid-cols-3'}`}>
+              {visiblePrimary.map((option) => {
+                const meta = TRANSACTION_TYPE_META[option.meta];
+                const Icon = meta.icon;
+                const active = primary === option.id;
                 return (
                   <button
-                    key={item.value}
+                    key={option.id}
                     type="button"
-                    onClick={() => handleTypeChange(item.value)}
-                    className={`flex flex-col items-center justify-center gap-1.5 rounded-2xl border py-3 px-1 transition-all active:scale-95 ${
+                    onClick={() => handlePrimaryChange(option.id)}
+                    className={`flex flex-col items-center justify-center gap-1.5 rounded-2xl border px-1 py-3 transition-all active:scale-95 ${
                       active
-                        ? `${item.toneActive} shadow-sm`
-                        : `${item.toneBorder} ${item.toneBg} ${item.tone} hover:brightness-95`
+                        ? `${meta.toneActive} shadow-sm`
+                        : `${meta.toneBorder} ${meta.toneBg} ${meta.tone} hover:brightness-95`
                     }`}
                   >
-                    <Icon size={17} />
-                    <span className="text-[10px] font-semibold leading-none text-center">{item.short}</span>
+                    <Icon size={18} />
+                    <span className="text-center text-[11px] font-semibold leading-none">{option.label}</span>
                   </button>
                 );
               })}
             </div>
           </div>
+
+          {/* Segunda pergunta, só para gastos: é do dia a dia ou conta fixa? */}
+          {primary === 'saiu' && (
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-1.5">
+                {(['diario', 'saida'] as const).map((kind) => {
+                  const meta = TRANSACTION_TYPE_META[kind];
+                  const active = type === kind;
+                  return (
+                    <button
+                      key={kind}
+                      type="button"
+                      onClick={() => handleTypeChange(kind)}
+                      className={`rounded-xl border py-2.5 text-[12px] font-semibold transition-all active:scale-95 ${
+                        active
+                          ? 'border-neutral-12 bg-neutral-12 text-neutral-00'
+                          : 'border-neutral-03 text-neutral-08 hover:text-neutral-11'
+                      }`}
+                    >
+                      {meta.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] leading-relaxed text-neutral-08">{typeMeta(type).hint}</p>
+            </div>
+          )}
+
+          {/* Os dois tipos contraintuitivos merecem uma frase antes de salvar:
+              em ambos o saldo cai por um motivo que não é "gastei". */}
+          {primary === 'economia' && (
+            <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 p-4">
+              <p className="text-[12px] leading-relaxed text-neutral-10">
+                <strong className="text-neutral-11">Seu saldo disponível vai cair</strong> — mas isso
+                não é gasto. O dinheiro continua sendo seu, só saiu da conta do dia a dia.
+              </p>
+            </div>
+          )}
 
           {/* Cartão: qual cartão, quando comprou e quando vence */}
           {isCard && (
@@ -596,7 +671,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             onClick={handleSubmit}
             className="w-full py-3.5 rounded-2xl bg-neutral-11 text-neutral-00 text-sm font-semibold shadow-sm transition-all hover:bg-neutral-10 active:scale-[0.98]"
           >
-            {editingTransaction ? 'Salvar alterações' : `Adicionar ${meta.short.toLowerCase()}`}
+            {editingTransaction ? 'Salvar alterações' : meta.saveLabel}
           </button>
         </div>
       </motion.div>

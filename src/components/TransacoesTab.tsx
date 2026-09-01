@@ -71,7 +71,7 @@ export const TransacoesTab: React.FC<TransacoesTabProps> = ({
       <div className="card-premium p-6 space-y-4">
         <div className="flex items-center justify-between gap-4 border-b border-neutral-02 pb-3">
           <h2 className="text-xl font-bold font-albert-sans text-neutral-11">
-            Histórico de Movimentações
+            Lançamentos
           </h2>
           
           {/* View Mode Toggle */}
@@ -111,7 +111,7 @@ export const TransacoesTab: React.FC<TransacoesTabProps> = ({
             </span>
             <input
               type="text"
-              placeholder="Buscar por descrição ou valor..."
+              placeholder="Buscar..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-11 pr-4 py-3 bg-transparent text-sm text-neutral-11 focus:outline-none placeholder-neutral-06"
@@ -128,7 +128,7 @@ export const TransacoesTab: React.FC<TransacoesTabProps> = ({
               onChange={(e) => setTypeFilter(e.target.value as TransactionType | 'todos')}
               className="w-full pl-11 pr-4 py-3 bg-transparent text-sm text-neutral-11 focus:outline-none appearance-none cursor-pointer"
             >
-              <option value="todos">Todos os tipos</option>
+              <option value="todos">Tudo</option>
               {TRANSACTION_TYPE_LIST.map((item) => (
                 <option key={item.value} value={item.value}>
                   {item.label}
@@ -161,7 +161,7 @@ export const TransacoesTab: React.FC<TransacoesTabProps> = ({
       {/* Transactions List */}
       <div className="space-y-3">
         <div className="flex items-center justify-between text-xs text-neutral-08 font-bold uppercase tracking-wider px-1">
-          <span>Movimentação</span>
+          <span>Lançamento</span>
           <span>{filteredTransactions.length} itens encontrados</span>
         </div>
 

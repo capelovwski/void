@@ -41,7 +41,7 @@ const HORIZON_MONTHS = 12;
 type TabId = 'saldos' | 'transacoes' | 'relatorios' | 'configuracoes' | 'perfil';
 
 const MOBILE_NAV_ITEMS: { id: TabId; label: string; icon: LucideIcon }[] = [
-  { id: 'saldos', label: 'Saldos', icon: Wallet },
+  { id: 'saldos', label: 'Calendário', icon: Wallet },
   { id: 'transacoes', label: 'Lista', icon: List },
   { id: 'relatorios', label: 'Relatórios', icon: TrendingUp },
   { id: 'configuracoes', label: 'Planejamento', icon: PenLine },
@@ -576,7 +576,7 @@ function App() {
 
         {/* Navigation Slots */}
         <div className="flex-1 flex flex-col gap-2 w-full">
-          {/* Saldos */}
+          {/* Calendário */}
           <button
             onClick={() => setActiveTab('saldos')}
             className={`flex items-center w-full px-3 py-3 rounded-2xl transition-all ${
@@ -587,7 +587,7 @@ function App() {
           >
             <Wallet size={20} className="flex-shrink-0 mx-auto group-hover:mx-0" />
             <span className="text-xs font-semibold group-hover:ml-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap overflow-hidden w-0 group-hover:w-auto">
-              Saldos
+              Calendário
             </span>
           </button>
 
@@ -657,7 +657,7 @@ function App() {
           <button
             onClick={() => openNewTransactionModal()}
             className="bg-main text-zinc-950 rounded-[20px] flex items-center transition-all duration-300 hover:scale-[1.06] active:scale-95 shadow-md hover:shadow-main/20 w-12 h-12 group-hover:w-full px-3 py-3 border border-neutral-04/55 font-semibold"
-            title="Nova Movimentação"
+            title="Novo lançamento"
           >
             <Plus size={20} className="flex-shrink-0 mx-auto group-hover:mx-0" />
             <span className="text-xs font-bold group-hover:ml-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap overflow-hidden w-0 group-hover:w-auto">
@@ -829,8 +829,8 @@ function App() {
             transition={ISLAND_SPRING}
             onClick={() => openNewTransactionModal()}
             className="w-11 h-11 flex-shrink-0 rounded-full bg-main text-zinc-950 flex items-center justify-center shadow-md active:scale-90 transition-transform"
-            title="Nova Movimentação"
-            aria-label="Nova movimentação"
+            title="Novo lançamento"
+            aria-label="Novo lançamento"
           >
             <Plus size={20} />
           </motion.button>

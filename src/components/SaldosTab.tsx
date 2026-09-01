@@ -73,10 +73,7 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
       <div className="sticky -top-6 z-20 -mx-4 -mt-6 mb-4 flex items-center justify-between gap-3 border-b border-neutral-02/60 bg-bg-01/85 px-4 pb-3 pt-6 backdrop-blur-xl tablet:static tablet:mx-0 tablet:mb-6 tablet:mt-0 tablet:border-0 tablet:bg-transparent tablet:px-0 tablet:pb-0 tablet:pt-0 tablet:backdrop-blur-none">
         <h2 className="flex min-w-0 items-center gap-2 font-albert-sans text-base font-bold text-neutral-11">
           <CalendarIcon size={18} className="flex-shrink-0 text-neutral-08" />
-          {/* No mobile o paginador come o espaço; truncar daria "Horizonte de E...",
-              então o título encurta de propósito. */}
-          <span className="tablet:hidden">Horizonte</span>
-          <span className="hidden tablet:inline">Horizonte de Eventos</span>
+          Calendário
         </h2>
 
         <div className="flex flex-shrink-0 items-center gap-1 rounded-xl border border-neutral-03/80 bg-neutral-01 p-1">

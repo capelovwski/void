@@ -9,6 +9,8 @@ export interface TransactionTypeMeta {
   short: string;
   /** Frase de ajuda no seletor do modal. */
   hint: string;
+  /** Texto do botão que salva o lançamento — "Adicionar do dia" não se lê. */
+  saveLabel: string;
   icon: LucideIcon;
   /** Cor do texto e do ícone. */
   tone: string;
@@ -31,9 +33,10 @@ export interface TransactionTypeMeta {
 export const TRANSACTION_TYPE_META: Record<TransactionType, TransactionTypeMeta> = {
   entrada: {
     value: 'entrada',
-    label: 'Entrada',
-    short: 'Entrada',
-    hint: 'Salário, freela, presente — soma no saldo na data lançada.',
+    label: 'Entrou',
+    short: 'Entrou',
+    hint: 'Dinheiro que chegou: salário, freela, presente.',
+    saveLabel: 'Adicionar entrada',
     icon: ArrowUpRight,
     tone: 'text-emerald-600 dark:text-emerald-400',
     toneBg: 'bg-emerald-500/10',
@@ -43,9 +46,10 @@ export const TRANSACTION_TYPE_META: Record<TransactionType, TransactionTypeMeta>
   },
   saida: {
     value: 'saida',
-    label: 'Saída',
-    short: 'Saída',
-    hint: 'Gasto fixo ou grande — aluguel, conta, matrícula.',
+    label: 'Conta fixa',
+    short: 'Fixa',
+    hint: 'Aluguel, conta de luz, mensalidade — o que se repete todo mês.',
+    saveLabel: 'Adicionar conta',
     icon: ArrowDownRight,
     tone: 'text-rose-600 dark:text-rose-400',
     toneBg: 'bg-rose-500/10',
@@ -55,9 +59,10 @@ export const TRANSACTION_TYPE_META: Record<TransactionType, TransactionTypeMeta>
   },
   diario: {
     value: 'diario',
-    label: 'Diário',
-    short: 'Diário',
-    hint: 'Gasto pequeno do dia a dia, comparado ao seu orçamento diário.',
+    label: 'Gasto do dia',
+    short: 'Do dia',
+    hint: 'Comida, transporte, besteira — comparado ao quanto você planejou gastar por dia.',
+    saveLabel: 'Adicionar gasto',
     icon: Receipt,
     tone: 'text-neutral-10',
     toneBg: 'bg-neutral-02',
@@ -67,9 +72,10 @@ export const TRANSACTION_TYPE_META: Record<TransactionType, TransactionTypeMeta>
   },
   economia: {
     value: 'economia',
-    label: 'Economia',
-    short: 'Economia',
-    hint: 'Dinheiro guardado ou investido — sai do disponível, mas conta como poupança.',
+    label: 'Guardei',
+    short: 'Guardei',
+    hint: 'Dinheiro que você separou ou investiu. Continua seu.',
+    saveLabel: 'Adicionar guardado',
     icon: PiggyBank,
     tone: 'text-violet-600 dark:text-violet-400',
     toneBg: 'bg-violet-500/10',
@@ -79,9 +85,10 @@ export const TRANSACTION_TYPE_META: Record<TransactionType, TransactionTypeMeta>
   },
   cartao: {
     value: 'cartao',
-    label: 'Gasto com cartão',
+    label: 'No cartão',
     short: 'Cartão',
-    hint: 'Não sai do saldo hoje — cai na data de vencimento da fatura do cartão.',
+    hint: 'Não sai do saldo hoje: só quando a fatura do cartão vencer.',
+    saveLabel: 'Adicionar no cartão',
     icon: CreditCard,
     tone: 'text-amber-600 dark:text-amber-400',
     toneBg: 'bg-amber-500/10',
