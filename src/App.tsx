@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Wallet, List, Plus, TrendingUp, PenLine, Bell, User } from 'lucide-react';
-import { AnimatePresence } from 'framer-motion';
+import { Wallet, List, Plus, TrendingUp, PenLine, Bell, User, type LucideIcon } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import type { BudgetConfig, Transaction, Tag, PlanningConfig, Bank, Card } from './types';
 import {
   SCHEMA_VERSION,
@@ -37,6 +37,21 @@ import voidIconLightMode from '../logo/void-icon-light-mode.svg';
 /** Tamanho do horizonte de projeção, em meses a partir do mês atual. */
 const HORIZON_MONTHS = 12;
 
+type TabId = 'saldos' | 'transacoes' | 'relatorios' | 'configuracoes' | 'perfil';
+
+const MOBILE_NAV_ITEMS: { id: TabId; label: string; icon: LucideIcon }[] = [
+  { id: 'saldos', label: 'Saldos', icon: Wallet },
+  { id: 'transacoes', label: 'Lista', icon: List },
+  { id: 'relatorios', label: 'Relatórios', icon: TrendingUp },
+  { id: 'configuracoes', label: 'Planejamento', icon: PenLine },
+];
+
+/**
+ * Mola curta e firme: a barra responde ao toque com o mesmo peso da Dynamic
+ * Island, sem o "pulo" elástico que uma mola mais solta produziria.
+ */
+const ISLAND_SPRING = { type: 'spring', stiffness: 420, damping: 34, mass: 0.7 } as const;
+
 /**
  * Descrição usada pelo atalho de um campo só ("gastei X hoje"). Ela identifica
  * o lançamento que o atalho controla, para que editar o campo atualize sempre
@@ -53,7 +68,7 @@ interface AppNotification {
 
 function App() {
   // 1. App Navigation State
-  const [activeTab, setActiveTab] = useState<'saldos' | 'transacoes' | 'relatorios' | 'configuracoes' | 'perfil'>('saldos');
+  const [activeTab, setActiveTab] = useState<TabId>('saldos');
 
   // 2. Theme & Auth
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -353,6 +368,49 @@ function App() {
   const openEditTransactionModal = (transaction: Transaction) => {
     setEditingTransaction(transaction);
     setIsModalOpen(true);
+  };
+
+  /**
+   * Item da barra mobile. Inativo é só o ícone num alvo de 44px; ativo vira uma
+   * pílula que revela o rótulo. O `layout` do framer-motion anima a mudança de
+   * largura — do item e da barra inteira — em vez de trocar de estado num corte
+   * seco. O rótulo entra e sai com a largura animada para não empurrar o ícone.
+   */
+  const renderNavItem = (item: (typeof MOBILE_NAV_ITEMS)[number]) => {
+    const isActive = activeTab === item.id;
+    const Icon = item.icon;
+
+    return (
+      <motion.button
+        key={item.id}
+        layout
+        transition={ISLAND_SPRING}
+        onClick={() => setActiveTab(item.id)}
+        aria-label={item.label}
+        aria-current={isActive ? 'page' : undefined}
+        className={`flex items-center justify-center gap-1.5 h-11 rounded-full flex-shrink-0 transition-colors duration-200 ${
+          isActive ? 'bg-neutral-12 text-neutral-00 px-2.5' : 'w-11 text-neutral-08 active:text-neutral-11'
+        }`}
+      >
+        <Icon size={19} className="flex-shrink-0" />
+        <AnimatePresence initial={false}>
+          {isActive && (
+            <motion.span
+              key="label"
+              initial={{ opacity: 0, width: 0 }}
+              animate={{ opacity: 1, width: 'auto' }}
+              exit={{ opacity: 0, width: 0 }}
+              transition={ISLAND_SPRING}
+              /* min-w-0 deixa o rótulo encolher em telas muito estreitas
+                 (320px), truncando em vez de empurrar a barra para fora. */
+              className="text-xs font-semibold whitespace-nowrap overflow-hidden min-w-0"
+            >
+              {item.label}
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </motion.button>
+    );
   };
 
   // 7. Projeção de saldo — 12 meses a partir do 1º dia do mês atual.
@@ -681,86 +739,33 @@ function App() {
         )}
       </main>
 
-      {/* Navigation Footer (Floating Navigation Menu - Desktop Style) */}
-      {/* O padding inferior soma a safe area para a barra não ficar sob a
-          home indicator do iPhone. */}
+      {/* Navegação mobile — barra flutuante estilo Dynamic Island.
+          Só o item ativo mostra o rótulo; os demais ficam apenas com o ícone, e
+          a barra encolhe/estica junto com a pílula em vez de ter largura fixa. */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-40 px-4 pt-2 bg-gradient-to-t from-bg-01 via-bg-01 to-transparent desktop:hidden"
+        className="fixed bottom-0 left-0 right-0 z-40 px-3 pt-2 flex justify-center pointer-events-none desktop:hidden"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
       >
-        <div className="max-w-md mx-auto bg-neutral-00/95 backdrop-blur-md text-neutral-11 rounded-3xl border border-neutral-03/80 shadow-2xl flex items-center justify-between py-2 px-3 relative">
-          
-          {/* Slot 1: Saldos */}
-          <button
-            onClick={() => setActiveTab('saldos')}
-            className={`px-1.5 py-1.5 rounded-2xl flex flex-col items-center justify-center transition-all ${
-              activeTab === 'saldos'
-                ? 'bg-neutral-12 text-neutral-00 shadow-sm'
-                : 'text-neutral-08 dark:text-neutral-05 hover:text-neutral-11'
-            }`}
-            style={{ minWidth: '52px', minHeight: '48px' }}
-            title="Saldos"
+        <motion.div
+          layout
+          transition={ISLAND_SPRING}
+          className="pointer-events-auto max-w-full flex items-center gap-0.5 p-1 rounded-full border border-neutral-03/80 bg-neutral-00/80 backdrop-blur-xl shadow-2xl"
+        >
+          {MOBILE_NAV_ITEMS.slice(0, 2).map(renderNavItem)}
+
+          <motion.button
+            layout
+            transition={ISLAND_SPRING}
+            onClick={() => openNewTransactionModal()}
+            className="w-11 h-11 flex-shrink-0 rounded-full bg-main text-zinc-950 flex items-center justify-center shadow-md active:scale-90 transition-transform"
+            title="Nova Movimentação"
+            aria-label="Nova movimentação"
           >
-            <Wallet size={20} />
-            <span className="text-[8px] font-bold mt-0.5 leading-none">Saldos</span>
-          </button>
- 
-          {/* Slot 2: Transações */}
-          <button
-            onClick={() => setActiveTab('transacoes')}
-            className={`px-1.5 py-1.5 rounded-2xl flex flex-col items-center justify-center transition-all ${
-              activeTab === 'transacoes'
-                ? 'bg-neutral-12 text-neutral-00 shadow-sm'
-                : 'text-neutral-08 dark:text-neutral-05 hover:text-neutral-11'
-            }`}
-            style={{ minWidth: '52px', minHeight: '48px' }}
-            title="Lista"
-          >
-            <List size={20} />
-            <span className="text-[8px] font-bold mt-0.5 leading-none">Lista</span>
-          </button>
- 
-          {/* Slot 3: Highlighted Central Plus Button (Desktop Squircle Style & Centered) */}
-          <div className="flex items-center justify-center flex-shrink-0">
-            <button
-              onClick={() => openNewTransactionModal()}
-              className="bg-main text-zinc-950 w-12 h-12 rounded-[20px] border border-neutral-04/55 shadow-md hover:shadow-main/20 flex items-center justify-center active:scale-95 transition-all duration-300 hover:scale-[1.06]"
-              title="Nova Movimentação"
-            >
-              <Plus size={20} className="flex-shrink-0" />
-            </button>
-          </div>
- 
-          {/* Slot 4: Relatórios */}
-          <button
-            onClick={() => setActiveTab('relatorios')}
-            className={`px-1.5 py-1.5 rounded-2xl flex flex-col items-center justify-center transition-all ${
-              activeTab === 'relatorios'
-                ? 'bg-neutral-12 text-neutral-00 shadow-sm'
-                : 'text-neutral-08 dark:text-neutral-05 hover:text-neutral-11'
-            }`}
-            style={{ minWidth: '52px', minHeight: '48px' }}
-            title="Relatórios"
-          >
-            <TrendingUp size={20} />
-            <span className="text-[8px] font-bold mt-0.5 leading-none">Relatórios</span>
-          </button>
- 
-          {/* Slot 5: Planejamento */}
-          <button
-            onClick={() => setActiveTab('configuracoes')}
-            className={`px-1.5 py-1.5 rounded-2xl flex flex-col items-center justify-center transition-all ${
-              activeTab === 'configuracoes'
-                ? 'bg-neutral-12 text-neutral-00 shadow-sm'
-                : 'text-neutral-08 dark:text-neutral-05 hover:text-neutral-11'
-            }`}
-            style={{ minWidth: '52px', minHeight: '48px' }}
-            title="Planejamento"
-          >
-            <PenLine size={20} />
-            <span className="text-[8px] font-bold mt-0.5 leading-none">Planejamento</span>
-          </button>
-        </div>
+            <Plus size={20} />
+          </motion.button>
+
+          {MOBILE_NAV_ITEMS.slice(2).map(renderNavItem)}
+        </motion.div>
       </nav>
       </div>
 
