@@ -3,7 +3,7 @@ import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, CircleAlert } from
 import type { Transaction, Tag } from '../types';
 import { isOutflow } from '../config/transactionTypes';
 import { useIsMobile } from '../hooks/useBreakpoint';
-import { todayYMD } from '../core';
+import { formatCompactBRL, todayYMD } from '../core';
 
 interface SaldosTabProps {
   transactions: Transaction[];
@@ -17,24 +17,6 @@ interface SaldosTabProps {
 
 /** 0 = mês atual. O app só projeta a partir de hoje, então não dá para voltar antes disso. */
 const MAX_MONTH_OFFSET = 2;
-
-const formatCompactBalance = (val: number): string => {
-  const isNeg = val < 0;
-  const absVal = Math.abs(val);
-  let formatted = '';
-  if (absVal >= 1000) {
-    const kVal = absVal / 1000;
-    if (kVal >= 10) {
-      formatted = `${Math.round(kVal)}k`;
-    } else {
-      const rounded = Math.round(kVal * 10) / 10;
-      formatted = `${rounded.toLocaleString('pt-BR')}k`;
-    }
-  } else {
-    formatted = Math.round(absVal).toString();
-  }
-  return `${isNeg ? '-' : ''}R$${formatted}`;
-};
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -82,35 +64,38 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-24 mx-auto w-full max-w-5xl desktop:min-h-[calc(100vh-140px)] desktop:flex desktop:flex-col desktop:justify-center">
+    <div className="pb-24 mx-auto w-full max-w-5xl desktop:min-h-[calc(100vh-140px)] desktop:flex desktop:flex-col desktop:justify-center">
 
-      {/* Header: título + paginador de mês (mês atual e os 2 seguintes) */}
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="text-base font-bold font-albert-sans text-neutral-11 flex items-center gap-2 min-w-0">
-          <CalendarIcon size={18} className="text-neutral-08 flex-shrink-0" />
+      {/* Header com o seletor de mês.
+          No mobile ele gruda no topo da área rolável: a lista tem 30 dias e,
+          sem isso, trocar de mês exigiria rolar tudo de volta. Sangra até as
+          bordas para o fundo desfocado cobrir a largura inteira. */}
+      <div className="sticky -top-6 z-20 -mx-4 -mt-6 mb-4 flex items-center justify-between gap-3 border-b border-neutral-02/60 bg-bg-01/85 px-4 pb-3 pt-6 backdrop-blur-xl tablet:static tablet:mx-0 tablet:mb-6 tablet:mt-0 tablet:border-0 tablet:bg-transparent tablet:px-0 tablet:pb-0 tablet:pt-0 tablet:backdrop-blur-none">
+        <h2 className="flex min-w-0 items-center gap-2 font-albert-sans text-base font-bold text-neutral-11">
+          <CalendarIcon size={18} className="flex-shrink-0 text-neutral-08" />
           {/* No mobile o paginador come o espaço; truncar daria "Horizonte de E...",
               então o título encurta de propósito. */}
           <span className="tablet:hidden">Horizonte</span>
           <span className="hidden tablet:inline">Horizonte de Eventos</span>
         </h2>
 
-        <div className="flex items-center gap-1 bg-neutral-01 p-1 rounded-xl border border-neutral-03/80">
+        <div className="flex flex-shrink-0 items-center gap-1 rounded-xl border border-neutral-03/80 bg-neutral-01 p-1">
           <button
             onClick={() => setMonthOffset((m) => Math.max(0, m - 1))}
             disabled={monthOffset === 0}
-            className="p-1.5 rounded-lg text-neutral-08 hover:text-neutral-11 hover:bg-neutral-02 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-neutral-08 transition-all"
+            className="rounded-lg p-1.5 text-neutral-08 transition-all hover:bg-neutral-02 hover:text-neutral-11 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-neutral-08"
             title="Mês anterior"
             aria-label="Mês anterior"
           >
             <ChevronLeft size={16} />
           </button>
-          <span className="px-2 text-xs font-bold text-neutral-11 text-center tabular-nums whitespace-nowrap tablet:min-w-[104px]">
+          <span className="whitespace-nowrap px-2 text-center text-xs font-bold tabular-nums text-neutral-11 tablet:min-w-[104px]">
             {monthLabel}
           </span>
           <button
             onClick={() => setMonthOffset((m) => Math.min(MAX_MONTH_OFFSET, m + 1))}
             disabled={monthOffset === MAX_MONTH_OFFSET}
-            className="p-1.5 rounded-lg text-neutral-08 hover:text-neutral-11 hover:bg-neutral-02 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-neutral-08 transition-all"
+            className="rounded-lg p-1.5 text-neutral-08 transition-all hover:bg-neutral-02 hover:text-neutral-11 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-neutral-08"
             title="Próximo mês"
             aria-label="Próximo mês"
           >
@@ -119,16 +104,16 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
         </div>
       </div>
 
-      {/* Sem receita fixa cadastrada o gasto diário base é zero, e a projeção
-          fica "parada" nos dias futuros — o que parece um bug. Avisa e leva
-          direto para onde se configura. */}
+      {/* Sem categorias com orçamento o gasto diário é zero, e a projeção fica
+          "parada" nos dias futuros — o que parece um bug. Avisa e leva direto
+          para onde se configura. */}
       {dailyBudget === 0 && (
         <button
           onClick={onGoToPlanning}
-          className="w-full flex items-start gap-2 p-3 rounded-xl bg-main/10 border border-main/25 text-left transition-colors hover:bg-main/15"
+          className="mb-4 flex w-full items-start gap-2 rounded-xl border border-main/25 bg-main/10 p-3 text-left transition-colors hover:bg-main/15 tablet:mb-6"
         >
-          <CircleAlert size={14} className="text-main flex-shrink-0 mt-0.5" />
-          <span className="text-[11px] text-neutral-10 leading-relaxed">
+          <CircleAlert size={14} className="mt-0.5 flex-shrink-0 text-main" />
+          <span className="text-[11px] leading-relaxed text-neutral-10">
             <strong className="text-neutral-11">Gasto diário zerado.</strong> Cadastre suas
             categorias em <strong className="text-neutral-11">Previsão de diário</strong>, dentro de
             Planejamento, para o saldo projetar os dias futuros.
@@ -137,8 +122,11 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
       )}
 
       {isMobile ? (
-        // Mobile: lista vertical dos dias do mês selecionado.
-        <div className="card-premium p-4 flex flex-col space-y-2 h-auto">
+        /* Mobile: lista corrida sangrando até as bordas.
+           Trinta cartões empilhados criavam trinta molduras concorrendo pela
+           atenção; aqui a separação é só um filete, e o peso visual sobra para
+           o que importa em cada linha — o dia e o saldo projetado. */
+        <div className="-mx-4 divide-y divide-neutral-02/50 border-y border-neutral-02/50">
           {(() => {
             const { totalDays } = getMonthDays(year, monthIndex);
             const days = [];
@@ -149,62 +137,76 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
               const isPast = dateStr < todayStr;
               const dayBalance = dailyBalances[dateStr] ?? 0;
               const dayTransactions = transactions.filter((t) => t.date === dateStr);
-              const dayTransactionsCount = dayTransactions.length;
+              const extras = dayTransactions.length - 2;
 
               const dateObj = new Date(dateStr + 'T00:00:00');
               const weekdayName = dateObj.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
-
-              const temporalOpacity = isPast ? 'opacity-35 grayscale contrast-75 brightness-[0.8] hover:opacity-85 hover:grayscale-0 hover:contrast-100 hover:brightness-100 transition-all' : 'opacity-100';
-              const presentBorder = isToday
-                ? (theme === 'dark'
-                  ? 'ring-2 ring-main border-main bg-main/15 shadow-[0_0_12px_rgba(254,247,175,0.25)] scale-[1.01] z-10 font-bold'
-                  : 'ring-2 ring-neutral-11 border-neutral-11 bg-neutral-02 shadow-[0_4px_12px_rgba(0,0,0,0.08)] scale-[1.01] z-10 font-bold')
-                : 'border-neutral-02/60 bg-neutral-00/30';
 
               days.push(
                 <button
                   key={dateStr}
                   onClick={() => onAddTransactionClick(dateStr)}
-                  className={`w-full flex items-center justify-between p-3 rounded-2xl border text-left transition-all hover:border-neutral-05 ${temporalOpacity} ${presentBorder}`}
+                  className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors active:bg-neutral-01 ${
+                    isToday ? 'bg-main/[0.07]' : ''
+                  } ${isPast ? 'opacity-45' : ''}`}
                 >
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className={`flex flex-col items-center justify-center border rounded-xl w-10 h-10 flex-shrink-0 ${
-                      isToday
-                        ? (theme === 'dark' ? 'bg-main text-zinc-950 border-main font-black' : 'bg-neutral-12 text-neutral-00 border-neutral-12 font-black')
-                        : 'bg-neutral-01 border-neutral-03/80'
-                    }`}>
-                      <span className="text-xs font-black">{day}</span>
-                      <span className="text-[9px] uppercase font-bold">{weekdayName}</span>
-                    </div>
-
-                    <div className="flex-1 min-w-0 flex flex-col gap-1 pr-2">
-                      {dayTransactions.slice(0, 2).map((t) => {
-                        const tag = getPrimaryTag(t);
-                        const isExpense = isOutflow(t.type);
-                        return (
-                          <div key={t.id} className="flex items-center gap-1.5 text-[10px] text-neutral-10 truncate font-semibold">
-                            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: tag?.color || (isExpense ? '#EF4444' : '#10B981') }} />
-                            <span className="truncate max-w-[80px]">{t.description}</span>
-                            <span className={`ml-auto font-mono text-[9px] ${isExpense ? 'text-red-500' : 'text-success'}`}>
-                              {isExpense ? '-' : '+'}R${Math.round(t.value)}
-                            </span>
-                          </div>
-                        );
-                      })}
-                      {dayTransactionsCount > 2 && (
-                        <span className="text-[9px] text-neutral-08 font-bold">
-                          +{dayTransactionsCount - 2} transações
-                        </span>
-                      )}
-                      {dayTransactionsCount === 0 && (
-                        <span className="text-[10px] text-neutral-07 italic">Sem eventos</span>
-                      )}
+                  {/* Data: número em destaque, dia da semana como apoio. */}
+                  <div
+                    className={`w-9 flex-shrink-0 text-center ${
+                      isToday ? 'text-main' : 'text-neutral-11'
+                    }`}
+                  >
+                    <div className="text-[15px] font-semibold leading-none tabular-nums">{day}</div>
+                    <div
+                      className={`mt-1 text-[10px] uppercase leading-none tracking-wider ${
+                        isToday ? 'text-main/80' : 'text-neutral-08'
+                      }`}
+                    >
+                      {weekdayName}
                     </div>
                   </div>
 
-                  <div className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold font-albert-sans shadow-sm ${heatmapClassFor(dayBalance)} flex-shrink-0`}>
-                    {formatCompactBalance(dayBalance)}
+                  {/* Lançamentos do dia. */}
+                  <div className="min-w-0 flex-1 space-y-1">
+                    {dayTransactions.slice(0, 2).map((t) => {
+                      const tag = getPrimaryTag(t);
+                      const isExpense = isOutflow(t.type);
+                      return (
+                        <div key={t.id} className="flex items-center gap-2">
+                          <span
+                            className="h-1.5 w-1.5 flex-shrink-0 rounded-full"
+                            style={{ backgroundColor: tag?.color || (isExpense ? '#F43F5E' : '#10B981') }}
+                          />
+                          <span className="truncate text-[13px] text-neutral-10">{t.description}</span>
+                          <span
+                            className={`ml-auto flex-shrink-0 text-[12px] tabular-nums ${
+                              isExpense ? 'text-rose-500 dark:text-rose-400' : 'text-emerald-500 dark:text-emerald-400'
+                            }`}
+                          >
+                            {isExpense ? '−' : '+'}
+                            {formatCompactBRL(t.value).replace('R$ ', '')}
+                          </span>
+                        </div>
+                      );
+                    })}
+
+                    {extras > 0 && (
+                      <span className="block text-[11px] text-neutral-08">
+                        +{extras} {extras === 1 ? 'lançamento' : 'lançamentos'}
+                      </span>
+                    )}
+
+                    {dayTransactions.length === 0 && (
+                      <span className="block text-[13px] text-neutral-07">Sem eventos</span>
+                    )}
                   </div>
+
+                  {/* Saldo projetado: o dado principal da linha. */}
+                  <span
+                    className={`flex-shrink-0 rounded-lg border px-2 py-1 text-[12px] font-semibold tabular-nums ${heatmapClassFor(dayBalance)}`}
+                  >
+                    {formatCompactBRL(dayBalance)}
+                  </span>
                 </button>,
               );
             }
@@ -295,7 +297,7 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
 
                   <div className="w-full text-center tablet:text-right overflow-hidden tablet:border-t tablet:border-neutral-02/30 tablet:pt-1 tablet:mt-1">
                     <span className="tablet:hidden font-black font-albert-sans block text-[9px] leading-none text-neutral-11">
-                      {formatCompactBalance(dayBalance)}
+                      {formatCompactBRL(dayBalance)}
                     </span>
                     <span className="hidden tablet:block font-black font-albert-sans truncate text-xs tablet:text-sm text-neutral-11">
                       R$ {Math.round(dayBalance).toLocaleString('pt-BR')}

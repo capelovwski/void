@@ -47,10 +47,14 @@ const MOBILE_NAV_ITEMS: { id: TabId; label: string; icon: LucideIcon }[] = [
 ];
 
 /**
- * Mola curta e firme: a barra responde ao toque com o mesmo peso da Dynamic
- * Island, sem o "pulo" elástico que uma mola mais solta produziria.
+ * Mola da barra. O amortecimento fica um pouco abaixo do crítico de propósito:
+ * a pílula chega ao destino com um resto de inércia, que é o que dá a sensação
+ * de massa da Dynamic Island. Amortecer demais deixa o movimento "mecânico".
  */
-const ISLAND_SPRING = { type: 'spring', stiffness: 420, damping: 34, mass: 0.7 } as const;
+const ISLAND_SPRING = { type: 'spring', stiffness: 360, damping: 26, mass: 0.9 } as const;
+
+/** O rótulo acompanha a pílula um pouco mais rápido, para não ficar arrastando atrás. */
+const ISLAND_LABEL_SPRING = { type: 'spring', stiffness: 420, damping: 30, mass: 0.7 } as const;
 
 /**
  * Descrição usada pelo atalho de um campo só ("gastei X hoje"). Ela identifica
@@ -372,9 +376,14 @@ function App() {
 
   /**
    * Item da barra mobile. Inativo é só o ícone num alvo de 44px; ativo vira uma
-   * pílula que revela o rótulo. O `layout` do framer-motion anima a mudança de
-   * largura — do item e da barra inteira — em vez de trocar de estado num corte
-   * seco. O rótulo entra e sai com a largura animada para não empurrar o ícone.
+   * pílula que revela o rótulo.
+   *
+   * O preenchimento da pílula é um elemento com `layoutId` compartilhado entre
+   * todos os itens, então o framer-motion o trata como o MESMO objeto mudando de
+   * lugar: ele desliza fisicamente de um item ao outro em vez de desaparecer
+   * aqui e reaparecer ali. É esse deslocamento contínuo que dá a leitura de
+   * Dynamic Island — animar só a largura de cada item, como antes, produzia
+   * duas mudanças independentes e o movimento não lia como um objeto só.
    */
   const renderNavItem = (item: (typeof MOBILE_NAV_ITEMS)[number]) => {
     const isActive = activeTab === item.id;
@@ -388,22 +397,34 @@ function App() {
         onClick={() => setActiveTab(item.id)}
         aria-label={item.label}
         aria-current={isActive ? 'page' : undefined}
-        className={`flex items-center justify-center gap-1.5 h-11 rounded-full flex-shrink-0 transition-colors duration-200 ${
-          isActive ? 'bg-neutral-12 text-neutral-00 px-2.5' : 'w-11 text-neutral-08 active:text-neutral-11'
+        className={`relative flex items-center justify-center gap-1.5 h-11 rounded-full flex-shrink-0 ${
+          isActive ? 'px-3 text-neutral-00' : 'w-11 text-neutral-08 active:text-neutral-11'
         }`}
       >
-        <Icon size={19} className="flex-shrink-0" />
-        <AnimatePresence initial={false}>
+        {isActive && (
+          <motion.span
+            layoutId="nav-island"
+            transition={ISLAND_SPRING}
+            className="absolute inset-0 rounded-full bg-neutral-12 shadow-lg"
+          />
+        )}
+
+        {/* O conteúdo fica acima do preenchimento que desliza por baixo. */}
+        <Icon size={19} className="relative z-10 flex-shrink-0" />
+
+        <AnimatePresence initial={false} mode="popLayout">
           {isActive && (
             <motion.span
               key="label"
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: 'auto' }}
-              exit={{ opacity: 0, width: 0 }}
-              transition={ISLAND_SPRING}
+              /* O desfoque na entrada e na saída faz o texto "materializar"
+                 junto com a pílula, em vez de piscar num corte de opacidade. */
+              initial={{ opacity: 0, width: 0, filter: 'blur(6px)', x: -4 }}
+              animate={{ opacity: 1, width: 'auto', filter: 'blur(0px)', x: 0 }}
+              exit={{ opacity: 0, width: 0, filter: 'blur(6px)', x: -4 }}
+              transition={ISLAND_LABEL_SPRING}
               /* min-w-0 deixa o rótulo encolher em telas muito estreitas
                  (320px), truncando em vez de empurrar a barra para fora. */
-              className="text-xs font-semibold whitespace-nowrap overflow-hidden min-w-0"
+              className="relative z-10 text-xs font-semibold whitespace-nowrap overflow-hidden min-w-0"
             >
               {item.label}
             </motion.span>
