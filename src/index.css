@@ -147,6 +147,14 @@
   --color-heatmap-neg-border: rgba(239, 68, 68, 0.30);
 
   --radius: 1rem;
+
+  /* Vidro no tema escuro: o brilho vem da luz refletindo na borda. */
+  --glass-rim-strong: rgba(255, 255, 255, 0.58);
+  --glass-rim-mid: rgba(255, 255, 255, 0.30);
+  --glass-rim-soft: rgba(255, 255, 255, 0.08);
+  --glass-sheen-top: rgba(255, 255, 255, 0.12);
+  --glass-sheen-bottom: rgba(0, 0, 0, 0.28);
+  --glass-border: rgba(255, 255, 255, 0.07);
 }
 
 .light {
@@ -213,6 +221,16 @@
   --color-heatmap-neg-bg: rgba(220, 38, 38, 0.12);
   --color-heatmap-neg-text: #7F1D1D;
   --color-heatmap-neg-border: rgba(220, 38, 38, 0.18);
+
+  /* No claro os cards são brancos, então um anel branco seria invisível: aqui
+     o gradiente é escuro e desenha a espessura do vidro por sombra, não por
+     brilho. O realce claro fica só na linha interna do topo. */
+  --glass-rim-strong: rgba(0, 0, 0, 0.16);
+  --glass-rim-mid: rgba(0, 0, 0, 0.10);
+  --glass-rim-soft: rgba(0, 0, 0, 0.03);
+  --glass-sheen-top: rgba(255, 255, 255, 1);
+  --glass-sheen-bottom: rgba(0, 0, 0, 0.05);
+  --glass-border: rgba(0, 0, 0, 0.09);
 }
 
 /* Custom scrollbar setup */
@@ -358,8 +376,59 @@ h6 { font-size: 16px; }
   @apply transition-all duration-300 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 font-medium px-4 py-3 rounded-xl border border-neutral-04 bg-neutral-00 hover:bg-neutral-01 text-neutral-11;
 }
 
+/* ------------------------------------------------------------------ *
+ * Borda de vidro (liquid glass)
+ *
+ * O anel é desenhado num pseudo-elemento com gradiente e recortado por
+ * `mask` composite, deixando visível só a faixa de 1px da borda. Uma
+ * `border-image` com gradiente não acompanharia os cantos arredondados;
+ * a máscara acompanha, porque herda o `border-radius` do elemento.
+ *
+ * O gradiente vai a 145graus com dois pontos claros — canto superior
+ * esquerdo e inferior direito — imitando a luz que atravessa a espessura
+ * do vidro, em vez de um contorno de brilho uniforme.
+ *
+ * Aplica-se a `.card-premium` e à barra de navegação mobile.
+ * ------------------------------------------------------------------ */
+.glass-edge,
 .card-premium {
-  @apply bg-neutral-00 rounded-2xl border border-neutral-03/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] p-5 transition-all duration-300;
+  position: relative;
+}
+
+.glass-edge::before,
+.card-premium::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    145deg,
+    var(--glass-rim-strong) 0%,
+    var(--glass-rim-soft) 26%,
+    transparent 52%,
+    var(--glass-rim-soft) 78%,
+    var(--glass-rim-mid) 100%
+  );
+  /* Recorta o miolo: sobra apenas o anel da borda. */
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  /* O anel é decoração: nunca deve roubar o clique do conteúdo. */
+  pointer-events: none;
+}
+
+.card-premium {
+  @apply bg-neutral-00 rounded-2xl p-5 transition-all duration-300;
+  border: 1px solid var(--glass-border);
+
+  /* Sombra externa suave + duas linhas internas que dão espessura ao vidro:
+     uma clara no topo e uma escura na base. */
+  box-shadow:
+    0 4px 20px -4px rgba(0, 0, 0, 0.03),
+    inset 0 1px 0 0 var(--glass-sheen-top),
+    inset 0 -1px 0 0 var(--glass-sheen-bottom);
 }
 
 /* Scroll Fade Mask Stripe-style */

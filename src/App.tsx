@@ -749,7 +749,7 @@ function App() {
         <motion.div
           layout
           transition={ISLAND_SPRING}
-          className="pointer-events-auto max-w-full flex items-center gap-0.5 p-1 rounded-full border border-neutral-03/80 bg-neutral-00/80 backdrop-blur-xl shadow-2xl"
+          className="glass-edge pointer-events-auto max-w-full flex items-center gap-0.5 p-1 rounded-full border border-neutral-03/60 bg-neutral-00/70 backdrop-blur-2xl backdrop-saturate-150 shadow-2xl"
         >
           {MOBILE_NAV_ITEMS.slice(0, 2).map(renderNavItem)}
 
