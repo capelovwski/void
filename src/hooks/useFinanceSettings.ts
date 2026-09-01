@@ -1,10 +1,24 @@
 import { useEffect, useState } from 'react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import type { PlanningConfig, RealSpends } from '../types';
+import type { BudgetConfig, PlanningConfig, RealSpends } from '../types';
 
 export interface FinanceSettings {
   initialBalance: number;
+
+  /** Orçamento por categorias que gera o gasto diário sugerido. */
+  budgetConfig?: BudgetConfig;
+
+  /** Versão do formato dos dados; ausente significa 1 (ver core/migration.ts). */
+  schemaVersion?: number;
+
+  /**
+   * Campos do modelo antigo, mantidos após a migração.
+   * `planningConfig` ainda guarda receita e despesas fixas — que não são gasto
+   * do dia a dia e por isso não viraram categorias de orçamento. `realSpends`
+   * fica como histórico: seus valores já foram copiados para movimentações
+   * do tipo `diario`.
+   */
   planningConfig: PlanningConfig;
   realSpends: RealSpends;
 }

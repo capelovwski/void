@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import {
   ArrowUpRight, ArrowDownRight, CreditCard, PiggyBank, Target,
-  GripVertical, SlidersHorizontal, Maximize2, Minimize2, Briefcase,
+  GripVertical, SlidersHorizontal, Maximize2, Minimize2,
   TrendingUp, Plus, Trash2, Edit2, X
 } from 'lucide-react';
 import { Reorder, useDragControls } from 'framer-motion';
-import type { Transaction, Tag, Bank } from '../types';
-import { CATEGORY_ICONS } from './PlanejamentoTab';
+import type { Transaction, Tag, TransactionType, Bank } from '../types';
+import { normalizeType } from '../core';
+import { isOutflow } from '../config/transactionTypes';
+import { categoryIcon } from '../config/categoryIcons';
 
 interface RelatoriosTabProps {
   transactions: Transaction[];
@@ -103,31 +105,37 @@ export const RelatoriosTab: React.FC<RelatoriosTabProps> = ({
   const textFillColor = isDark ? '#A3A3A3' : '#605F5F'; // neutral-06 / neutral-10
   const donutBgColor = isDark ? 'rgba(255, 255, 255, 0.06)' : '#EEEEEE';
   // 1. Core Financial Calculations
-  const sumByType = (type: Transaction['type']) => {
+  // `normalizeType` faz os lançamentos antigos do tipo `fatura` entrarem em `cartao`.
+  const sumByType = (type: TransactionType) => {
     return transactions
-      .filter((t) => t.type === type)
+      .filter((t) => normalizeType(t.type) === type)
       .reduce((sum, t) => sum + t.value, 0);
   };
 
   const totalEntradas = sumByType('entrada');
   const totalSaidas = sumByType('saida');
-  const totalFaturas = sumByType('fatura');
+  const totalDiarios = sumByType('diario');
+  const totalFaturas = sumByType('cartao');
   const totalEconomias = sumByType('economia');
-  const totalDespesas = totalSaidas + totalFaturas;
+  const totalDespesas = totalSaidas + totalDiarios + totalFaturas;
 
   // Savings rate = Economias / Receitas
   const savingsRate = totalEntradas > 0 ? (totalEconomias / totalEntradas) * 100 : 0;
 
   // 2. SVG Donut Chart Calculation (Expenses by Tag)
   const getExpensesByTag = () => {
-    const expenseTransactions = transactions.filter((t) => t.type === 'saida' || t.type === 'fatura');
+    // Tudo que sai do saldo entra no donut, incluindo diários e economias.
+    const expenseTransactions = transactions.filter((t) => isOutflow(t.type));
     const totals: { [tagId: string]: number } = {};
     let grandTotal = 0;
 
     expenseTransactions.forEach((t) => {
-      const tagId = t.tagId || 'outros';
-      totals[tagId] = (totals[tagId] || 0) + t.value;
-      grandTotal += t.value;
+      // Uma movimentação multi-tag soma o valor cheio em cada uma das suas tags.
+      const tagIds = t.tagIds && t.tagIds.length > 0 ? t.tagIds : [t.tagId || 'outros'];
+      tagIds.forEach((tagId) => {
+        totals[tagId] = (totals[tagId] || 0) + t.value;
+        grandTotal += t.value;
+      });
     });
 
     if (grandTotal === 0) return [];
@@ -556,7 +564,7 @@ export const RelatoriosTab: React.FC<RelatoriosTabProps> = ({
 
                 <div className="flex-1 space-y-2 w-full max-h-[200px] overflow-y-auto pr-1">
                   {tagData.map((slice) => {
-                    const IconComponent = CATEGORY_ICONS[slice.icon as keyof typeof CATEGORY_ICONS] || Briefcase;
+                    const IconComponent = categoryIcon(slice.icon);
                     return (
                       <div key={slice.name} className="flex items-center justify-between text-xs gap-3">
                         <div className="flex items-center gap-2 min-w-0">

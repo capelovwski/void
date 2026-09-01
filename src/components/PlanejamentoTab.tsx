@@ -1,36 +1,19 @@
 import React, { useState } from 'react';
-import type { Tag, PlanningConfig, FixedExpense, Transaction } from '../types';
+import type { BudgetConfig, Card, Tag, PlanningConfig, FixedExpense, Transaction } from '../types';
 import {
   Trash2, Wallet, Palette, Tag as TagIcon, Sparkles, TrendingUp, Plus, Award, Zap, Target,
-  Utensils, Film, PiggyBank, Car, Heart, Home, ShoppingBag, BookOpen, Wrench, Briefcase
 } from 'lucide-react';
+import { formatBRL } from '../core';
+import {
+  CATEGORY_ICONS,
+  CATEGORY_ICON_LABELS,
+  DEFAULT_CATEGORY_ICON,
+  categoryIcon,
+  type CategoryIconKey,
+} from '../config/categoryIcons';
 import { NotesSection } from './NotesSection';
-
-export const CATEGORY_ICONS = {
-  utensils: Utensils,
-  film: Film,
-  piggy: PiggyBank,
-  car: Car,
-  heart: Heart,
-  home: Home,
-  shopping: ShoppingBag,
-  book: BookOpen,
-  wrench: Wrench,
-  briefcase: Briefcase,
-};
-
-const ICON_LABELS = {
-  utensils: 'Alimentação',
-  film: 'Lazer',
-  piggy: 'Investimento',
-  car: 'Transporte',
-  heart: 'Saúde',
-  home: 'Moradia',
-  shopping: 'Compras',
-  book: 'Educação',
-  wrench: 'Serviços',
-  briefcase: 'Trabalho/Outros',
-};
+import { BudgetSection } from './planning/BudgetSection';
+import { CardsSection } from './planning/CardsSection';
 
 interface PlanejamentoTabProps {
   transactions: Transaction[];
@@ -41,6 +24,13 @@ interface PlanejamentoTabProps {
   setInitialBalance: (balance: number) => void;
   planningConfig: PlanningConfig;
   setPlanningConfig: (config: PlanningConfig) => void;
+  cards: Card[];
+  onSaveCard: (card: Omit<Card, 'id'> & { id?: string }) => void;
+  onDeleteCard: (cardId: string) => void;
+  budgetConfig: BudgetConfig;
+  setBudgetConfig: (config: BudgetConfig) => void;
+  /** Gasto diário sugerido já calculado a partir de `budgetConfig`. */
+  dailyBudget: number;
 }
 
 const PRESET_COLORS = [
@@ -67,12 +57,18 @@ export const PlanejamentoTab: React.FC<PlanejamentoTabProps> = ({
   setInitialBalance,
   planningConfig,
   setPlanningConfig,
+  cards,
+  onSaveCard,
+  onDeleteCard,
+  budgetConfig,
+  setBudgetConfig,
+  dailyBudget,
 }) => {
   // 1. Tag Manager State
   const [tagName, setTagName] = useState('');
   const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0]);
   const [customColor, setCustomColor] = useState('#605f5f');
-  const [selectedIcon, setSelectedIcon] = useState<string>('briefcase');
+  const [selectedIcon, setSelectedIcon] = useState<CategoryIconKey>(DEFAULT_CATEGORY_ICON);
 
   // 2. Initial Balance State
   const [walletInput, setWalletInput] = useState(initialBalance.toString());
@@ -166,13 +162,12 @@ export const PlanejamentoTab: React.FC<PlanejamentoTabProps> = ({
     });
 
     setTagName('');
-    setSelectedIcon('briefcase');
+    setSelectedIcon(DEFAULT_CATEGORY_ICON);
   };
 
   // Math Calculations
   const totalFixedExpenses = planningConfig.fixedExpenses.reduce((sum, e) => sum + e.value, 0);
   const remainingBudget = Math.max(0, planningConfig.fixedRevenue - totalFixedExpenses);
-  const dailyBaseSpend = remainingBudget / daysInMonth;
 
   // Monthly saving goal calculations (Média Saudável)
   const healthySavingsTarget = remainingBudget * 0.3;
@@ -251,7 +246,7 @@ export const PlanejamentoTab: React.FC<PlanejamentoTabProps> = ({
           <div className="flex items-center gap-2 text-neutral-11 border-b border-neutral-02 pb-3">
             <TrendingUp size={20} className="text-neutral-08" />
             <h2 className="text-lg font-bold font-albert-sans">
-              Calculadora de Gasto Diário Base
+              Renda e despesas fixas
             </h2>
           </div>
 
@@ -376,11 +371,11 @@ export const PlanejamentoTab: React.FC<PlanejamentoTabProps> = ({
             </div>
 
             <div className="flex flex-col items-center justify-center bg-neutral-01 border border-neutral-03/60 px-5 py-4 rounded-xl text-center shadow-inner min-w-[160px] flex-shrink-0">
-              <span className="text-[9px] text-neutral-08 uppercase font-bold tracking-wider block mb-1">Gasto Diário Disponível</span>
-              <span className="text-2xl font-black font-albert-sans text-main">
-                R$ {dailyBaseSpend.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <span className="text-[9px] text-neutral-08 uppercase font-bold tracking-wider block mb-1">Gasto diário sugerido</span>
+              <span className="text-2xl font-black font-albert-sans text-main tabular-nums">
+                {formatBRL(dailyBudget)}
               </span>
-              <span className="text-[9px] text-neutral-08 block mt-1">limite recomendado/dia</span>
+              <span className="text-[9px] text-neutral-08 block mt-1">definido em Previsão de diário</span>
             </div>
           </div>
 
@@ -545,7 +540,9 @@ export const PlanejamentoTab: React.FC<PlanejamentoTabProps> = ({
                 Selecione um Ícone
               </label>
               <div className="grid grid-cols-5 gap-2">
-                {Object.entries(CATEGORY_ICONS).map(([key, Icon]) => (
+                {(Object.keys(CATEGORY_ICONS) as CategoryIconKey[]).map((key) => {
+                  const Icon = CATEGORY_ICONS[key];
+                  return (
                   <button
                     key={key}
                     type="button"
@@ -555,11 +552,12 @@ export const PlanejamentoTab: React.FC<PlanejamentoTabProps> = ({
                         ? 'bg-neutral-12 text-neutral-00 border-transparent scale-105 shadow-sm'
                         : 'border-neutral-03 text-neutral-08 hover:text-neutral-11 hover:bg-neutral-01'
                     }`}
-                    title={ICON_LABELS[key as keyof typeof ICON_LABELS]}
+                    title={CATEGORY_ICON_LABELS[key]}
                   >
                     <Icon size={16} />
                   </button>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -589,7 +587,7 @@ export const PlanejamentoTab: React.FC<PlanejamentoTabProps> = ({
               >
                 <div className="flex items-center gap-2.5">
                   {(() => {
-                    const IconComponent = CATEGORY_ICONS[tag.icon as keyof typeof CATEGORY_ICONS] || Briefcase;
+                    const IconComponent = categoryIcon(tag.icon);
                     return (
                       <div 
                         className="w-8 h-8 rounded-xl flex items-center justify-center border flex-shrink-0"
@@ -625,6 +623,14 @@ export const PlanejamentoTab: React.FC<PlanejamentoTabProps> = ({
           </div>
         </div>
 
+      </div>
+
+      {/* Cartões e previsão de diário: as duas configurações que alimentam o
+          cálculo do saldo — em qual fatura uma compra cai, e quanto se espera
+          gastar por dia nos dias que ainda não aconteceram. */}
+      <div className="grid grid-cols-1 desktop:grid-cols-2 gap-6">
+        <CardsSection cards={cards} onSaveCard={onSaveCard} onDeleteCard={onDeleteCard} />
+        <BudgetSection budgetConfig={budgetConfig} setBudgetConfig={setBudgetConfig} />
       </div>
 
       {/* Anotações pessoais (antes uma aba própria, agora parte do

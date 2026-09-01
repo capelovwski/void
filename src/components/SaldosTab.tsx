@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
-import { Calendar as CalendarIcon, CircleAlert } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, CircleAlert } from 'lucide-react';
 import type { Transaction, Tag } from '../types';
+import { isOutflow } from '../config/transactionTypes';
+import { useIsMobile } from '../hooks/useBreakpoint';
+import { todayYMD } from '../core';
 
 interface SaldosTabProps {
   transactions: Transaction[];
@@ -8,9 +11,12 @@ interface SaldosTabProps {
   onAddTransactionClick: (date?: string) => void;
   dailyBalances: Record<string, number>;
   theme: 'dark' | 'light';
-  dailyBaseSpend: number;
+  dailyBudget: number;
   onGoToPlanning: () => void;
 }
+
+/** 0 = mês atual. O app só projeta a partir de hoje, então não dá para voltar antes disso. */
+const MAX_MONTH_OFFSET = 2;
 
 const formatCompactBalance = (val: number): string => {
   const isNeg = val < 0;
@@ -30,97 +36,82 @@ const formatCompactBalance = (val: number): string => {
   return `${isNeg ? '-' : ''}R$${formatted}`;
 };
 
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+const heatmapClassFor = (dayBalance: number): string => {
+  if (dayBalance >= 5000) return 'bg-heatmap-high-bg text-heatmap-high-text border-heatmap-high-border';
+  if (dayBalance >= 300) return 'bg-heatmap-ok-bg text-heatmap-ok-text border-heatmap-ok-border';
+  if (dayBalance >= 100) return 'bg-heatmap-warn-bg text-heatmap-warn-text border-heatmap-warn-border';
+  if (dayBalance >= 0) return 'bg-heatmap-crit-bg text-heatmap-crit-text border-heatmap-crit-border';
+  return 'bg-heatmap-neg-bg text-heatmap-neg-text border-heatmap-neg-border';
+};
+
 export const SaldosTab: React.FC<SaldosTabProps> = ({
   transactions,
   tags,
   onAddTransactionClick,
   dailyBalances,
   theme,
-  dailyBaseSpend,
+  dailyBudget,
   onGoToPlanning,
 }) => {
-  const todayStr = new Date().toISOString().split('T')[0];
-  const [calendarView, setCalendarView] = useState<'1month' | '3months'>('1month');
-  const [isMobile, setIsMobile] = useState(false);
+  const todayStr = todayYMD();
+  const isMobile = useIsMobile();
+  const [monthOffset, setMonthOffset] = useState(0);
 
-  React.useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 768);
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  const today = new Date();
+  const monthDate = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
+  const year = monthDate.getFullYear();
+  const monthIndex = monthDate.getMonth();
+  const monthLabel = `${capitalize(monthDate.toLocaleDateString('pt-BR', { month: 'long' }))} ${year}`;
 
-  // Helper to format date strings
-  const formatDateToYMD = (year: number, monthIndex: number, day: number): string => {
-    const monthStr = String(monthIndex + 1).padStart(2, '0');
-    const dayStr = String(day).padStart(2, '0');
-    return `${year}-${monthStr}-${dayStr}`;
+  const formatDateToYMD = (y: number, m: number, day: number): string => {
+    return `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   };
 
-  // Generate months to display
-  const getMonthsToRender = () => {
-    const months = [];
-    const today = new Date();
-    const count = calendarView === '1month' ? 1 : 3;
-    
-    for (let i = 0; i < count; i++) {
-      const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
-      months.push({
-        year: d.getFullYear(),
-        monthIndex: d.getMonth(),
-        name: d.toLocaleString('pt-BR', { month: 'long', year: 'numeric' }),
-      });
-    }
-    return months;
+  const getMonthDays = (y: number, m: number) => {
+    const firstDay = new Date(y, m, 1);
+    const totalDays = new Date(y, m + 1, 0).getDate();
+    return { totalDays, startDayOfWeek: firstDay.getDay() };
   };
 
-  const monthsToRender = getMonthsToRender();
-
-  const getMonthDays = (year: number, monthIndex: number) => {
-    const firstDay = new Date(year, monthIndex, 1);
-    const lastDay = new Date(year, monthIndex + 1, 0);
-    const totalDays = lastDay.getDate();
-    const startDayOfWeek = firstDay.getDay(); // 0 is Sunday, 1 is Monday...
-    return { totalDays, startDayOfWeek };
-  };
-
-  const getTagDetails = (tagId?: string) => {
-    return tags.find((t) => t.id === tagId);
+  // A bolinha ao lado do lançamento usa a primeira tag dele.
+  const getPrimaryTag = (t: Transaction) => {
+    const first = t.tagIds?.[0] ?? t.tagId;
+    return first ? tags.find((tag) => tag.id === first) : undefined;
   };
 
   return (
-    <div className={`space-y-6 pb-24 mx-auto w-full desktop:min-h-[calc(100vh-140px)] desktop:flex desktop:flex-col desktop:justify-center ${calendarView === '3months' ? 'max-w-7xl' : 'max-w-5xl'}`}>
-      
-      {/* despoluído calendar header */}
+    <div className="space-y-6 pb-24 mx-auto w-full max-w-5xl desktop:min-h-[calc(100vh-140px)] desktop:flex desktop:flex-col desktop:justify-center">
+
+      {/* Header: título + paginador de mês (mês atual e os 2 seguintes) */}
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-base font-bold font-albert-sans text-neutral-11 flex items-center gap-2">
           <CalendarIcon size={18} className="text-neutral-08" />
           Horizonte de Eventos
         </h2>
 
-        {/* Small minimalist details corner toggle buttons */}
-        <div className="flex bg-neutral-01 p-1 rounded-xl border border-neutral-03/80">
+        <div className="flex items-center gap-1 bg-neutral-01 p-1 rounded-xl border border-neutral-03/80">
           <button
-            onClick={() => setCalendarView('1month')}
-            className={`px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ${
-              calendarView === '1month'
-                ? 'bg-neutral-12 text-neutral-00 shadow-sm'
-                : 'text-neutral-08 hover:text-neutral-11'
-            }`}
-            title="Ver 1 mês"
+            onClick={() => setMonthOffset((m) => Math.max(0, m - 1))}
+            disabled={monthOffset === 0}
+            className="p-1.5 rounded-lg text-neutral-08 hover:text-neutral-11 hover:bg-neutral-02 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-neutral-08 transition-all"
+            title="Mês anterior"
+            aria-label="Mês anterior"
           >
-            1 Mês
+            <ChevronLeft size={16} />
           </button>
+          <span className="px-2 text-xs font-bold text-neutral-11 min-w-[104px] text-center tabular-nums">
+            {monthLabel}
+          </span>
           <button
-            onClick={() => setCalendarView('3months')}
-            className={`px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ${
-              calendarView === '3months'
-                ? 'bg-neutral-12 text-neutral-00 shadow-sm'
-                : 'text-neutral-08 hover:text-neutral-11'
-            }`}
-            title="Ver 3 meses"
+            onClick={() => setMonthOffset((m) => Math.min(MAX_MONTH_OFFSET, m + 1))}
+            disabled={monthOffset === MAX_MONTH_OFFSET}
+            className="p-1.5 rounded-lg text-neutral-08 hover:text-neutral-11 hover:bg-neutral-02 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-neutral-08 transition-all"
+            title="Próximo mês"
+            aria-label="Próximo mês"
           >
-            3 Meses
+            <ChevronRight size={16} />
           </button>
         </div>
       </div>
@@ -128,265 +119,117 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
       {/* Sem receita fixa cadastrada o gasto diário base é zero, e a projeção
           fica "parada" nos dias futuros — o que parece um bug. Avisa e leva
           direto para onde se configura. */}
-      {dailyBaseSpend === 0 && (
+      {dailyBudget === 0 && (
         <button
           onClick={onGoToPlanning}
           className="w-full flex items-start gap-2 p-3 rounded-xl bg-main/10 border border-main/25 text-left transition-colors hover:bg-main/15"
         >
           <CircleAlert size={14} className="text-main flex-shrink-0 mt-0.5" />
           <span className="text-[11px] text-neutral-10 leading-relaxed">
-            <strong className="text-neutral-11">Gasto diário base zerado.</strong> Cadastre sua
-            receita mensal em <strong className="text-neutral-11">Planejamento</strong> para o saldo
-            projetar os dias futuros.
+            <strong className="text-neutral-11">Gasto diário zerado.</strong> Cadastre suas
+            categorias em <strong className="text-neutral-11">Previsão de diário</strong>, dentro de
+            Planejamento, para o saldo projetar os dias futuros.
           </span>
         </button>
       )}
 
-      {/* Calendar Grid Container / Timeline Container */}
-      {calendarView === '3months' ? (
-        isMobile ? (
-          // Visão de Linha do Tempo contínua para Mobile
-          <div className="card-premium p-4 flex flex-col space-y-4 h-auto">
-            <div className="space-y-2 pr-1">
-              {(() => {
-                const allDays: { year: number; monthIndex: number; monthName: string; day: number }[] = [];
-                monthsToRender.forEach(({ year, monthIndex, name }) => {
-                  const lastDay = new Date(year, monthIndex + 1, 0);
-                  const totalDays = lastDay.getDate();
-                  for (let day = 1; day <= totalDays; day++) {
-                    allDays.push({ year, monthIndex, monthName: name, day });
-                  }
-                });
+      {isMobile ? (
+        // Mobile: lista vertical dos dias do mês selecionado.
+        <div className="card-premium p-4 flex flex-col space-y-2 h-auto">
+          {(() => {
+            const { totalDays } = getMonthDays(year, monthIndex);
+            const days = [];
 
-                return allDays.map(({ year, monthIndex, monthName, day }, index) => {
-                  const dateStr = formatDateToYMD(year, monthIndex, day);
-                  const isToday = dateStr === todayStr;
-                  const isPast = dateStr < todayStr;
-                  const dayBalance = dailyBalances[dateStr] ?? 0;
-                  const dayTransactions = transactions.filter((t) => t.date === dateStr);
-                  const dayTransactionsCount = dayTransactions.length;
+            for (let day = 1; day <= totalDays; day++) {
+              const dateStr = formatDateToYMD(year, monthIndex, day);
+              const isToday = dateStr === todayStr;
+              const isPast = dateStr < todayStr;
+              const dayBalance = dailyBalances[dateStr] ?? 0;
+              const dayTransactions = transactions.filter((t) => t.date === dateStr);
+              const dayTransactionsCount = dayTransactions.length;
 
-                  // Render a month divider at the start of a month or if index === 0
-                  const showMonthHeader = index === 0 || allDays[index - 1].monthIndex !== monthIndex;
+              const dateObj = new Date(dateStr + 'T00:00:00');
+              const weekdayName = dateObj.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
 
-                  const dateObj = new Date(dateStr + 'T00:00:00');
-                  const weekdayName = dateObj.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
+              const temporalOpacity = isPast ? 'opacity-35 grayscale contrast-75 brightness-[0.8] hover:opacity-85 hover:grayscale-0 hover:contrast-100 hover:brightness-100 transition-all' : 'opacity-100';
+              const presentBorder = isToday
+                ? (theme === 'dark'
+                  ? 'ring-2 ring-main border-main bg-main/15 shadow-[0_0_12px_rgba(254,247,175,0.25)] scale-[1.01] z-10 font-bold'
+                  : 'ring-2 ring-neutral-11 border-neutral-11 bg-neutral-02 shadow-[0_4px_12px_rgba(0,0,0,0.08)] scale-[1.01] z-10 font-bold')
+                : 'border-neutral-02/60 bg-neutral-00/30';
 
-                  // Temporal styles: opacity reduced if past
-                  const temporalOpacity = isPast ? 'opacity-35 grayscale contrast-75 brightness-[0.8] hover:opacity-85 hover:grayscale-0 hover:contrast-100 hover:brightness-100 transition-all' : 'opacity-100';
-                  const presentBorder = isToday
-                    ? (theme === 'dark'
-                      ? 'ring-2 ring-main border-main bg-main/15 shadow-[0_0_12px_rgba(254,247,175,0.25)] scale-[1.01] z-10 font-bold'
-                      : 'ring-2 ring-neutral-11 border-neutral-11 bg-neutral-02 shadow-[0_4px_12px_rgba(0,0,0,0.08)] scale-[1.01] z-10 font-bold')
-                    : 'border-neutral-02/60 bg-neutral-00/30';
+              days.push(
+                <button
+                  key={dateStr}
+                  onClick={() => onAddTransactionClick(dateStr)}
+                  className={`w-full flex items-center justify-between p-3 rounded-2xl border text-left transition-all hover:border-neutral-05 ${temporalOpacity} ${presentBorder}`}
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className={`flex flex-col items-center justify-center border rounded-xl w-10 h-10 flex-shrink-0 ${
+                      isToday
+                        ? (theme === 'dark' ? 'bg-main text-zinc-950 border-main font-black' : 'bg-neutral-12 text-neutral-00 border-neutral-12 font-black')
+                        : 'bg-neutral-01 border-neutral-03/80'
+                    }`}>
+                      <span className="text-xs font-black">{day}</span>
+                      <span className="text-[9px] uppercase font-bold">{weekdayName}</span>
+                    </div>
 
-                  let heatmapClass = 'bg-neutral-01 text-neutral-11 border-neutral-03 hover:bg-neutral-02';
-                  if (dayBalance >= 5000) heatmapClass = 'bg-heatmap-high-bg text-heatmap-high-text border-heatmap-high-border';
-                  else if (dayBalance >= 300) heatmapClass = 'bg-heatmap-ok-bg text-heatmap-ok-text border-heatmap-ok-border';
-                  else if (dayBalance >= 100) heatmapClass = 'bg-heatmap-warn-bg text-heatmap-warn-text border-heatmap-warn-border';
-                  else if (dayBalance >= 0) heatmapClass = 'bg-heatmap-crit-bg text-heatmap-crit-text border-heatmap-crit-border';
-                  else heatmapClass = 'bg-heatmap-neg-bg text-heatmap-neg-text border-heatmap-neg-border';
-
-                  return (
-                    <React.Fragment key={dateStr}>
-                      {showMonthHeader && (
-                        <div className="sticky top-0 z-20 bg-neutral-00/90 backdrop-blur-sm py-2 text-center text-xs font-bold font-albert-sans text-neutral-11 uppercase border-b border-neutral-02 tracking-wider mt-4">
-                          {monthName}
-                        </div>
+                    <div className="flex-1 min-w-0 flex flex-col gap-1 pr-2">
+                      {dayTransactions.slice(0, 2).map((t) => {
+                        const tag = getPrimaryTag(t);
+                        const isExpense = isOutflow(t.type);
+                        return (
+                          <div key={t.id} className="flex items-center gap-1.5 text-[10px] text-neutral-10 truncate font-semibold">
+                            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: tag?.color || (isExpense ? '#EF4444' : '#10B981') }} />
+                            <span className="truncate max-w-[80px]">{t.description}</span>
+                            <span className={`ml-auto font-mono text-[9px] ${isExpense ? 'text-red-500' : 'text-success'}`}>
+                              {isExpense ? '-' : '+'}R${Math.round(t.value)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                      {dayTransactionsCount > 2 && (
+                        <span className="text-[9px] text-neutral-08 font-bold">
+                          +{dayTransactionsCount - 2} transações
+                        </span>
                       )}
-                      <button
-                        onClick={() => onAddTransactionClick(dateStr)}
-                        className={`w-full flex items-center justify-between p-3 rounded-2xl border text-left transition-all hover:border-neutral-05 ${temporalOpacity} ${presentBorder}`}
-                      >
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <div className={`flex flex-col items-center justify-center border rounded-xl w-10 h-10 flex-shrink-0 ${
-                            isToday 
-                              ? (theme === 'dark' ? 'bg-main text-zinc-950 border-main font-black' : 'bg-neutral-12 text-neutral-00 border-neutral-12 font-black') 
-                              : 'bg-neutral-01 border-neutral-03/80'
-                          }`}>
-                            <span className="text-xs font-black">{day}</span>
-                            <span className="text-[9px] uppercase font-bold">{weekdayName}</span>
-                          </div>
-
-                          <div className="flex-1 min-w-0 flex flex-col gap-1 pr-2">
-                            {dayTransactions.slice(0, 2).map((t) => {
-                              const tag = getTagDetails(t.tagId);
-                              const isExpense = t.type === 'saida' || t.type === 'fatura';
-                              return (
-                                <div key={t.id} className="flex items-center gap-1.5 text-[10px] text-neutral-10 truncate font-semibold">
-                                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: tag?.color || (isExpense ? '#EF4444' : '#10B981') }} />
-                                  <span className="truncate max-w-[80px]">{t.description}</span>
-                                  <span className={`ml-auto font-mono text-[9px] ${isExpense ? 'text-red-500' : 'text-success'}`}>
-                                    {isExpense ? '-' : '+'}R${Math.round(t.value)}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                            {dayTransactionsCount > 2 && (
-                              <span className="text-[9px] text-neutral-08 font-bold">
-                                +{dayTransactionsCount - 2} transações
-                              </span>
-                            )}
-                            {dayTransactionsCount === 0 && (
-                              <span className="text-[10px] text-neutral-07 italic">Sem eventos</span>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold font-albert-sans shadow-sm ${heatmapClass} flex-shrink-0`}>
-                          {formatCompactBalance(dayBalance)}
-                        </div>
-                      </button>
-                    </React.Fragment>
-                  );
-                });
-              })()}
-            </div>
-          </div>
-        ) : (
-          // Visão de Linha do Tempo em 3 Colunas (Lista Vertical por Mês) - Desktop
-          <div className="grid grid-cols-1 desktop:grid-cols-3 gap-6">
-            {monthsToRender.map(({ year, monthIndex, name }) => {
-              const { totalDays } = getMonthDays(year, monthIndex);
-              const daysList = [];
-
-              for (let day = 1; day <= totalDays; day++) {
-                const dateStr = formatDateToYMD(year, monthIndex, day);
-                const isToday = dateStr === todayStr;
-                const isPast = dateStr < todayStr;
-                const dayBalance = dailyBalances[dateStr] ?? 0;
-
-                // Get transactions for this day
-                const dayTransactions = transactions.filter((t) => t.date === dateStr);
-                const dayTransactionsCount = dayTransactions.length;
-
-                // Heatmap color class
-                let heatmapClass = 'bg-neutral-01 text-neutral-11 border-neutral-03 hover:bg-neutral-02';
-                if (dayBalance >= 5000) {
-                  heatmapClass = 'bg-heatmap-high-bg text-heatmap-high-text border-heatmap-high-border';
-                } else if (dayBalance >= 300) {
-                  heatmapClass = 'bg-heatmap-ok-bg text-heatmap-ok-text border-heatmap-ok-border';
-                } else if (dayBalance >= 100) {
-                  heatmapClass = 'bg-heatmap-warn-bg text-heatmap-warn-text border-heatmap-warn-border';
-                } else if (dayBalance >= 0) {
-                  heatmapClass = 'bg-heatmap-crit-bg text-heatmap-crit-text border-heatmap-crit-border';
-                } else {
-                  heatmapClass = 'bg-heatmap-neg-bg text-heatmap-neg-text border-heatmap-neg-border';
-                }
-
-                const dateObj = new Date(dateStr + 'T00:00:00');
-                const weekdayName = dateObj.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
-
-                const temporalOpacity = isPast ? 'opacity-35 grayscale contrast-75 brightness-[0.8] hover:opacity-85 hover:grayscale-0 hover:contrast-100 hover:brightness-100 transition-all' : 'opacity-100';
-                const presentBorder = isToday
-                  ? (theme === 'dark'
-                    ? 'ring-2 ring-main border-main bg-main/15 shadow-[0_0_12px_rgba(254,247,175,0.25)] scale-[1.01] z-10 font-bold'
-                    : 'ring-2 ring-neutral-11 border-neutral-11 bg-neutral-02 shadow-[0_4px_12px_rgba(0,0,0,0.08)] scale-[1.01] z-10 font-bold')
-                  : 'border-neutral-02/60 bg-neutral-00/30';
-
-                daysList.push(
-                  <button
-                    key={`timeline-day-${day}`}
-                    onClick={() => {
-                      onAddTransactionClick(dateStr);
-                    }}
-                    className={`w-full flex items-center justify-between p-3 rounded-2xl border text-left transition-all hover:border-neutral-05 ${temporalOpacity} ${presentBorder}`}
-                  >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className={`flex flex-col items-center justify-center border rounded-xl w-10 h-10 flex-shrink-0 ${
-                        isToday 
-                          ? (theme === 'dark' ? 'bg-main text-zinc-950 border-main font-black' : 'bg-neutral-12 text-neutral-00 border-neutral-12 font-black') 
-                          : 'bg-neutral-01 border-neutral-03/80'
-                      }`}>
-                        <span className="text-xs font-black">{day}</span>
-                        <span className="text-[9px] uppercase font-bold">{weekdayName}</span>
-                      </div>
-
-                      {/* Actual list of transactions for this day */}
-                      <div className="flex-1 min-w-0 flex flex-col gap-1 pr-2">
-                        {dayTransactions.slice(0, 2).map((t) => {
-                          const tag = getTagDetails(t.tagId);
-                          const isExpense = t.type === 'saida' || t.type === 'fatura';
-                          return (
-                            <div key={t.id} className="flex items-center gap-1.5 text-[10px] text-neutral-10 truncate font-semibold">
-                              <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: tag?.color || (isExpense ? '#EF4444' : '#10B981') }} />
-                              <span className="truncate max-w-[80px]">{t.description}</span>
-                              <span className={`ml-auto font-mono text-[9px] ${isExpense ? 'text-red-500' : 'text-success'}`}>
-                                {isExpense ? '-' : '+'}R${Math.round(t.value)}
-                              </span>
-                            </div>
-                          );
-                        })}
-                        {dayTransactionsCount > 2 && (
-                          <span className="text-[9px] text-neutral-08 font-bold">
-                            +{dayTransactionsCount - 2} transações
-                          </span>
-                        )}
-                        {dayTransactionsCount === 0 && (
-                          <span className="text-[10px] text-neutral-07 italic">Sem eventos</span>
-                        )}
-                      </div>
+                      {dayTransactionsCount === 0 && (
+                        <span className="text-[10px] text-neutral-07 italic">Sem eventos</span>
+                      )}
                     </div>
-
-                    <div className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold font-albert-sans shadow-sm ${heatmapClass} flex-shrink-0`}>
-                      {formatCompactBalance(dayBalance)}
-                    </div>
-                  </button>
-                );
-              }
-
-              return (
-                <div key={name} className="card-premium p-4 flex flex-col space-y-4 desktop:h-[72vh] desktop:max-h-[72vh] h-auto">
-                  <h3 className="text-base font-bold font-albert-sans text-neutral-11 capitalize text-center border-b border-neutral-02 pb-2">
-                    {name}
-                  </h3>
-                  <div className="flex-1 desktop:overflow-y-auto overflow-visible space-y-2 pr-1 scroll-fade-mask">
-                    {daysList}
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )
-      ) : (
-        // Visão de 1 Mês (Grade Tradicional de Calendário)
-        <div className="grid grid-cols-1 gap-6">
-          {monthsToRender.map(({ year, monthIndex, name }) => {
-            const { totalDays, startDayOfWeek } = getMonthDays(year, monthIndex);
-            const dayBlocks = [];
-            const weekHeaders = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
-            // Padding blocks
+                  <div className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold font-albert-sans shadow-sm ${heatmapClassFor(dayBalance)} flex-shrink-0`}>
+                    {formatCompactBalance(dayBalance)}
+                  </div>
+                </button>,
+              );
+            }
+
+            return days;
+          })()}
+        </div>
+      ) : (
+        // Desktop: grade tradicional de calendário do mês selecionado.
+        <div className="card-premium p-4 flex flex-col h-auto desktop:h-[72vh]">
+          {(() => {
+            const { totalDays, startDayOfWeek } = getMonthDays(year, monthIndex);
+            const weekHeaders = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+            const dayBlocks = [];
+
             for (let i = 0; i < startDayOfWeek; i++) {
               dayBlocks.push(<div key={`empty-${i}`} className="aspect-square tablet:aspect-auto tablet:h-full tablet:min-h-24 border border-transparent" />);
             }
 
-            // Render Days
             for (let day = 1; day <= totalDays; day++) {
               const dateStr = formatDateToYMD(year, monthIndex, day);
               const isToday = dateStr === todayStr;
               const isPast = dateStr < todayStr;
               const dayBalance = dailyBalances[dateStr] ?? 0;
 
-              // Day block specific transactions list and count
               const dayTransactions = transactions.filter((t) => t.date === dateStr);
               const dayTransactionsCount = dayTransactions.length;
 
-              // Heatmap color class (Progressive Health Scale)
-              let heatmapClass = 'bg-neutral-01 text-neutral-11 border-neutral-03 hover:bg-neutral-02';
-              if (dayBalance >= 5000) {
-                heatmapClass = 'bg-heatmap-high-bg text-heatmap-high-text border-heatmap-high-border';
-              } else if (dayBalance >= 300) {
-                heatmapClass = 'bg-heatmap-ok-bg text-heatmap-ok-text border-heatmap-ok-border';
-              } else if (dayBalance >= 100) {
-                heatmapClass = 'bg-heatmap-warn-bg text-heatmap-warn-text border-heatmap-warn-border';
-              } else if (dayBalance >= 0) {
-                heatmapClass = 'bg-heatmap-crit-bg text-heatmap-crit-text border-heatmap-crit-border';
-              } else {
-                heatmapClass = 'bg-heatmap-neg-bg text-heatmap-neg-text border-heatmap-neg-border';
-              }
-
-              // Temporal styles: opacidade reduzida se passado, contorno sutil se hoje
               const temporalOpacity = isPast ? 'opacity-35 grayscale contrast-75 brightness-[0.8] hover:opacity-85 hover:grayscale-0 hover:contrast-100 hover:brightness-100 transition-all' : 'opacity-100';
               const presentBorder = isToday
                 ? (theme === 'dark'
@@ -397,10 +240,8 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
               dayBlocks.push(
                 <button
                   key={`day-${day}`}
-                  onClick={() => {
-                    onAddTransactionClick(dateStr);
-                  }}
-                  className={`rounded-xl flex flex-col text-left transition-all aspect-square tablet:aspect-auto tablet:h-full tablet:min-h-24 p-1 tablet:p-2 items-center tablet:items-stretch justify-center tablet:justify-between gap-0.5 tablet:gap-0 ${heatmapClass} ${presentBorder} ${temporalOpacity}`}
+                  onClick={() => onAddTransactionClick(dateStr)}
+                  className={`rounded-xl flex flex-col text-left transition-all aspect-square tablet:aspect-auto tablet:h-full tablet:min-h-24 p-1 tablet:p-2 items-center tablet:items-stretch justify-center tablet:justify-between gap-0.5 tablet:gap-0 ${heatmapClassFor(dayBalance)} ${presentBorder} ${temporalOpacity}`}
                 >
                   <div className="flex items-center justify-center tablet:justify-between w-full">
                     <span className={`text-[11px] tablet:text-xs font-black ${
@@ -421,13 +262,12 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
                     <span className="tablet:hidden w-1 h-1 rounded-full bg-current opacity-60 flex-shrink-0" />
                   )}
 
-                  {/* Day's transactions list (neat & legible values) */}
                   <div className="hidden tablet:flex w-full my-1.5 flex-col gap-0.5 overflow-hidden">
                     {dayTransactions.slice(0, 2).map((t, idx) => {
-                      const isExpense = t.type === 'saida' || t.type === 'fatura';
+                      const isExpense = isOutflow(t.type);
                       return (
-                        <div 
-                          key={t.id || idx} 
+                        <div
+                          key={t.id || idx}
                           className="text-[9.5px] font-semibold text-neutral-11 flex items-center justify-between gap-1 w-full truncate"
                           title={t.description}
                         >
@@ -449,10 +289,8 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
                       </div>
                     )}
                   </div>
-                  
-                  {/* Projected Balance Display */}
+
                   <div className="w-full text-center tablet:text-right overflow-hidden tablet:border-t tablet:border-neutral-02/30 tablet:pt-1 tablet:mt-1">
-                    {/* Mobile: formato compacto — "R$ -1.250" não cabe em ~40px */}
                     <span className="tablet:hidden font-black font-albert-sans block text-[9px] leading-none text-neutral-11">
                       {formatCompactBalance(dayBalance)}
                     </span>
@@ -460,31 +298,23 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
                       R$ {Math.round(dayBalance).toLocaleString('pt-BR')}
                     </span>
                   </div>
-                </button>
+                </button>,
               );
             }
 
             return (
-              <div key={name} className="card-premium p-4 flex flex-col h-auto desktop:h-[72vh]">
-                <h3 className="text-base font-bold font-albert-sans text-neutral-11 capitalize text-center mb-4">
-                  {name}
-                </h3>
-                
-                {/* Weekday headers */}
+              <>
                 <div className="grid grid-cols-7 gap-1 tablet:gap-1.5 text-center text-[9px] tablet:text-[10px] font-semibold text-neutral-08 uppercase mb-1.5">
                   {weekHeaders.map((h) => (
                     <div key={h}>{h}</div>
                   ))}
                 </div>
-
-                {/* Day grid — no mobile as linhas seguem o aspect-square das
-                    células; a partir do tablet voltam a preencher o card. */}
                 <div className="grid grid-cols-7 gap-1 tablet:gap-1.5 tablet:flex-1">
                   {dayBlocks}
                 </div>
-              </div>
+              </>
             );
-          })}
+          })()}
         </div>
       )}
 

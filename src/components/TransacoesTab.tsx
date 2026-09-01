@@ -1,7 +1,15 @@
 import React, { useState } from 'react';
-import { Search, Filter, Trash2, Calendar, CreditCard, ArrowUpRight, ArrowDownRight, PiggyBank, Edit3, Briefcase, Columns, Receipt } from 'lucide-react';
+import { Search, Filter, Trash2, Calendar, Edit3, Columns, Receipt } from 'lucide-react';
 import type { Transaction, Tag, TransactionType } from '../types';
-import { CATEGORY_ICONS } from './PlanejamentoTab';
+import { normalizeType } from '../core';
+import { TRANSACTION_TYPE_LIST, typeMeta } from '../config/transactionTypes';
+import { categoryIcon } from '../config/categoryIcons';
+
+/** Tags de uma movimentação, cobrindo o campo antigo (`tagId`) e o novo (`tagIds`). */
+function transactionTagIds(t: Transaction): string[] {
+  if (t.tagIds && t.tagIds.length > 0) return t.tagIds;
+  return t.tagId ? [t.tagId] : [];
+}
 
 interface TransacoesTabProps {
   transactions: Transaction[];
@@ -37,25 +45,24 @@ export const TransacoesTab: React.FC<TransacoesTabProps> = ({
     .filter((t) => {
       const matchesSearch = t.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
         t.value.toString().includes(searchTerm);
-      const matchesType = typeFilter === 'todos' || t.type === typeFilter;
-      const matchesTag = tagFilter === 'todos' || t.tagId === tagFilter;
+      const matchesType = typeFilter === 'todos' || normalizeType(t.type) === typeFilter;
+      const matchesTag = tagFilter === 'todos' || transactionTagIds(t).includes(tagFilter);
       
       return matchesSearch && matchesType && matchesTag;
     })
     // Sort transactions by date descending
     .sort((a, b) => b.date.localeCompare(a.date));
 
-  const getTagDetails = (tagId?: string) => {
-    return tags.find((t) => t.id === tagId);
+  // A tag mostrada na linha é a primeira da lista; o filtro considera todas.
+  const getPrimaryTag = (t: Transaction) => {
+    const [first] = transactionTagIds(t);
+    return first ? tags.find((tag) => tag.id === first) : undefined;
   };
 
-  const getIconClass = (type: TransactionType) => {
-    switch (type) {
-      case 'entrada': return { icon: <ArrowUpRight className="text-success" size={16} />, bg: 'bg-success/10' };
-      case 'saida': return { icon: <ArrowDownRight className="text-red-500" size={16} />, bg: 'bg-red-500/10' };
-      case 'fatura': return { icon: <CreditCard className="text-amber-500" size={16} />, bg: 'bg-amber-500/10' };
-      case 'economia': return { icon: <PiggyBank className="text-violet-500 dark:text-violet-400" size={16} />, bg: 'bg-violet-500/10 dark:bg-violet-400/10' };
-    }
+  const getIconClass = (type: Transaction['type']) => {
+    const meta = typeMeta(type);
+    const Icon = meta.icon;
+    return { icon: <Icon className={meta.tone} size={16} />, bg: meta.toneBg, label: meta.short };
   };
 
   return (
@@ -118,14 +125,15 @@ export const TransacoesTab: React.FC<TransacoesTabProps> = ({
             </span>
             <select
               value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value as any)}
+              onChange={(e) => setTypeFilter(e.target.value as TransactionType | 'todos')}
               className="w-full pl-11 pr-4 py-3 bg-transparent text-sm text-neutral-11 focus:outline-none appearance-none cursor-pointer"
             >
               <option value="todos">Todos os tipos</option>
-              <option value="entrada">Entradas</option>
-              <option value="saida">Saídas (Débito)</option>
-              <option value="fatura">Faturas (Crédito)</option>
-              <option value="economia">Economias</option>
+              {TRANSACTION_TYPE_LIST.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -165,7 +173,7 @@ export const TransacoesTab: React.FC<TransacoesTabProps> = ({
           /* Typographic High-Density Statement (v2) */
           <div className="bg-neutral-00 rounded-2xl border border-neutral-03/80 shadow-sm overflow-hidden divide-y divide-neutral-02">
             {filteredTransactions.map((t) => {
-              const tag = getTagDetails(t.tagId);
+              const tag = getPrimaryTag(t);
               const iconInfo = getIconClass(t.type);
 
               return (
@@ -194,7 +202,7 @@ export const TransacoesTab: React.FC<TransacoesTabProps> = ({
                           style={{ borderColor: tag.color + '40', backgroundColor: tag.color + '10', color: tag.color }}
                         >
                           {(() => {
-                            const IconComponent = CATEGORY_ICONS[tag.icon as keyof typeof CATEGORY_ICONS] || Briefcase;
+                            const IconComponent = categoryIcon(tag.icon);
                             return <IconComponent size={8} />;
                           })()}
                           <span>{tag.name}</span>
@@ -247,7 +255,7 @@ export const TransacoesTab: React.FC<TransacoesTabProps> = ({
           /* Cards View Mode with Category Icons */
           <div className="space-y-3">
             {filteredTransactions.map((t) => {
-              const tag = getTagDetails(t.tagId);
+              const tag = getPrimaryTag(t);
               const iconInfo = getIconClass(t.type);
 
               return (
@@ -275,7 +283,7 @@ export const TransacoesTab: React.FC<TransacoesTabProps> = ({
                             style={{ borderColor: tag.color + '40', backgroundColor: tag.color + '10', color: tag.color }}
                           >
                             {(() => {
-                              const IconComponent = CATEGORY_ICONS[tag.icon as keyof typeof CATEGORY_ICONS] || Briefcase;
+                              const IconComponent = categoryIcon(tag.icon);
                               return <IconComponent size={10} />;
                             })()}
                             {tag.name}
@@ -296,8 +304,9 @@ export const TransacoesTab: React.FC<TransacoesTabProps> = ({
                       }`}>
                         {t.type === 'entrada' ? '+' : '-'} R$ {t.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </div>
-                      <span className="text-[10px] text-neutral-08 font-semibold capitalize">
-                        {t.type === 'fatura' ? 'Crédito' : t.type}
+                      <span className="text-[10px] text-neutral-08 font-semibold">
+                        {iconInfo.label}
+                        {t.installmentCount ? ` · ${t.installmentCount}x` : ''}
                       </span>
                     </div>
 

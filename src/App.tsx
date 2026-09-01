@@ -1,7 +1,19 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Wallet, List, Plus, TrendingUp, PenLine, Bell, User } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
-import type { Transaction, Tag, PlanningConfig, RealSpends, Bank } from './types';
+import type { BudgetConfig, Transaction, Tag, PlanningConfig, Bank, Card } from './types';
+import {
+  SCHEMA_VERSION,
+  addMonthsYMD,
+  buildProjection,
+  dailyBudgetFrom,
+  endOfMonthYMD,
+  planMigration,
+  planningConfigToBudget,
+  round2,
+  startOfMonthYMD,
+  todayYMD,
+} from './core';
 import { DEFAULT_TAGS } from './utils/mockData';
 import { useAuth } from './contexts/AuthContext';
 import { useUserCollection } from './hooks/useUserCollection';
@@ -21,6 +33,16 @@ import voidDarkModeLogo from '../logo/void-dark-mode.svg';
 import voidLightModeLogo from '../logo/void-light-mode.svg';
 import voidIconDarkMode from '../logo/void-icon-dark-mode.svg';
 import voidIconLightMode from '../logo/void-icon-light-mode.svg';
+
+/** Tamanho do horizonte de projeção, em meses a partir do mês atual. */
+const HORIZON_MONTHS = 12;
+
+/**
+ * Descrição usada pelo atalho de um campo só ("gastei X hoje"). Ela identifica
+ * o lançamento que o atalho controla, para que editar o campo atualize sempre
+ * o mesmo documento em vez de criar um novo a cada digitação.
+ */
+const QUICK_DAILY_DESCRIPTION = 'Gasto do dia';
 
 interface AppNotification {
   id: string;
@@ -84,12 +106,25 @@ function App() {
     removeItem: removeBankDoc,
   } = useUserCollection<Bank>(userId, 'banks');
 
+  const {
+    items: cards,
+    loading: cardsLoading,
+    addItem: addCardDoc,
+    setItem: setCardDoc,
+    removeItem: removeCardDoc,
+  } = useUserCollection<Card>(userId, 'cards');
+
   const { settings, loading: settingsLoading, updateSettings } = useFinanceSettings(userId);
 
-  const financeDataLoading = transactionsLoading || tagsLoading || banksLoading || settingsLoading;
+  const financeDataLoading =
+    transactionsLoading || tagsLoading || banksLoading || cardsLoading || settingsLoading;
   const initialBalance = settings?.initialBalance ?? 0;
   const planningConfig: PlanningConfig = settings?.planningConfig ?? { fixedRevenue: 0, fixedExpenses: [] };
-  const realSpends: RealSpends = settings?.realSpends ?? {};
+
+  // Contas antigas ainda não têm `budgetConfig` gravado — até a migração rodar,
+  // o orçamento é derivado do planejamento antigo para o número não zerar.
+  const budgetConfig: BudgetConfig = settings?.budgetConfig ?? planningConfigToBudget(planningConfig);
+  const dailyBudget = dailyBudgetFrom(budgetConfig);
 
   const persistBanks = async (newBanks: Bank[]) => {
     const newIds = new Set(newBanks.map((b) => b.id));
@@ -142,15 +177,49 @@ function App() {
           realSpends: legacyRealSpends ? JSON.parse(legacyRealSpends) : {},
         });
       } else {
+        // Conta nova já nasce no formato atual, então a migração abaixo não roda.
         await Promise.all(DEFAULT_TAGS.map((t) => setTagDoc(t)));
         await updateSettings({
           initialBalance: 0,
           planningConfig: { fixedRevenue: 0, fixedExpenses: [] },
           realSpends: {},
+          budgetConfig: { categories: [], daysDivisor: 30 },
+          schemaVersion: SCHEMA_VERSION,
         });
       }
     })();
   }, [userId, financeDataLoading, transactions.length, tags.length, banks.length, settings]);
+
+  // Migração para o modelo de 5 tipos: converte `fatura` em `cartao`, promove a
+  // tag única para a lista de tags e transforma o mapa `realSpends` em
+  // movimentações do tipo `diario`. Roda uma vez por conta; o plano em si é
+  // calculado por uma função pura e testada (core/migration.ts).
+  const migratedRef = useRef(false);
+  useEffect(() => {
+    if (!userId || financeDataLoading || !settings || migratedRef.current) return;
+    if ((settings.schemaVersion ?? 1) >= SCHEMA_VERSION) return;
+
+    migratedRef.current = true;
+
+    (async () => {
+      const plan = planMigration({
+        transactions,
+        realSpends: settings.realSpends,
+        planningConfig: settings.planningConfig,
+        existingBudget: settings.budgetConfig,
+        currentSchemaVersion: settings.schemaVersion ?? 1,
+      });
+      if (plan.isNoop) return;
+
+      await Promise.all([
+        ...plan.transactionsToUpdate.map((t) => setTransactionDoc(t)),
+        ...plan.transactionsToCreate.map((t) => setTransactionDoc(t)),
+      ]);
+      // `realSpends` continua gravado como histórico — a cópia para `diario` é
+      // idempotente, então nada se perde se a migração for interrompida no meio.
+      await updateSettings({ budgetConfig: plan.budgetConfig, schemaVersion: plan.schemaVersion });
+    })();
+  }, [userId, financeDataLoading, settings, transactions]);
 
   // 5. State Persistence Helpers
   const persistBalance = async (newBalance: number) => {
@@ -180,8 +249,32 @@ function App() {
     await updateSettings({ planningConfig: newConfig });
   };
 
-  const handleUpdateRealSpend = async (dateStr: string, value: number) => {
-    await updateSettings({ realSpends: { ...realSpends, [dateStr]: value } });
+  /**
+   * Atalho de um campo só: "gastei X neste dia" grava (ou atualiza) um único
+   * lançamento `diario`, em vez de obrigar a lançar item a item. Zerar o campo
+   * apaga o lançamento — nada gasto e nada anotado dão o mesmo saldo.
+   */
+  const handleSetDailySpend = async (dateStr: string, value: number) => {
+    const existing = transactions.find(
+      (t) => t.type === 'diario' && t.date === dateStr && t.description === QUICK_DAILY_DESCRIPTION,
+    );
+
+    if (value <= 0) {
+      if (existing) await removeTransactionDoc(existing.id);
+      return;
+    }
+
+    if (existing) {
+      await setTransactionDoc({ ...existing, value: round2(value) });
+    } else {
+      await addTransactionDoc({
+        type: 'diario',
+        value: round2(value),
+        description: QUICK_DAILY_DESCRIPTION,
+        date: dateStr,
+        recurrence: 'nenhuma',
+      });
+    }
   };
 
   // 6. CRUD Operations
@@ -205,11 +298,41 @@ function App() {
     await addTagDoc(tagData);
   };
 
+  const handleSaveCard = async (cardData: Omit<Card, 'id'> & { id?: string }) => {
+    if (cardData.id) {
+      await setCardDoc(cardData as Card);
+    } else {
+      await addCardDoc(cardData);
+    }
+  };
+
+  const handleDeleteCard = async (cardId: string) => {
+    await removeCardDoc(cardId);
+
+    // As compras que apontavam para o cartão viram gastos de cartão soltos: a
+    // data de vencimento já está gravada em cada uma, então nenhum saldo muda.
+    const affected = transactions.filter((t) => t.cardId === cardId);
+    await Promise.all(affected.map((t) => setTransactionDoc({ ...t, cardId: undefined })));
+  };
+
+  const persistBudgetConfig = async (config: BudgetConfig) => {
+    await updateSettings({ budgetConfig: config });
+  };
+
   const handleDeleteTag = async (tagId: string) => {
     await removeTagDoc(tagId);
 
-    const affected = transactions.filter((t) => t.tagId === tagId);
-    await Promise.all(affected.map((t) => setTransactionDoc({ ...t, tagId: undefined })));
+    // Desvincula a tag das movimentações, cobrindo o campo antigo e o novo.
+    const affected = transactions.filter((t) => t.tagId === tagId || t.tagIds?.includes(tagId));
+    await Promise.all(
+      affected.map((t) =>
+        setTransactionDoc({
+          ...t,
+          tagId: undefined,
+          tagIds: (t.tagIds ?? []).filter((id) => id !== tagId),
+        }),
+      ),
+    );
   };
 
   // Triggers
@@ -224,59 +347,44 @@ function App() {
     setIsModalOpen(true);
   };
 
-  // 7. Math calculations for Cascade Balances
-  const todayStr = new Date().toISOString().split('T')[0];
-  const totalFixedExpenses = planningConfig.fixedExpenses.reduce((sum, e) => sum + e.value, 0);
-  const remainingBudget = Math.max(0, planningConfig.fixedRevenue - totalFixedExpenses);
-  const daysInCurrentMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
-  const dailyBaseSpend = remainingBudget / daysInCurrentMonth;
+  // 7. Projeção de saldo — 12 meses a partir do 1º dia do mês atual.
+  //
+  // `initialBalance` é, por definição, o saldo no primeiro dia do mês atual, e
+  // é a única âncora confiável da cascata: por isso o horizonte começa
+  // exatamente ali. Olhar para meses anteriores vai exigir guardar o saldo
+  // fechado de cada mês, o que ainda não existe.
+  const todayStr = todayYMD();
+  const horizonStart = startOfMonthYMD(todayStr);
+  const horizonEnd = endOfMonthYMD(addMonthsYMD(horizonStart, HORIZON_MONTHS - 1));
 
-  // Generate range of dates from start of current month to end of 3-month window
-  const getDatesInRange = () => {
-    const dates: string[] = [];
-    const today = new Date();
-    const start = new Date(today.getFullYear(), today.getMonth(), 1);
-    const end = new Date(today.getFullYear(), today.getMonth() + 3, 0);
-    
-    const current = new Date(start);
-    while (current <= end) {
-      const y = current.getFullYear();
-      const m = String(current.getMonth() + 1).padStart(2, '0');
-      const d = String(current.getDate()).padStart(2, '0');
-      dates.push(`${y}-${m}-${d}`);
-      current.setDate(current.getDate() + 1);
+  const { projection } = useMemo(
+    () =>
+      buildProjection({
+        transactions,
+        initialBalance,
+        start: horizonStart,
+        end: horizonEnd,
+        today: todayStr,
+        dailyBudget,
+      }),
+    [transactions, initialBalance, horizonStart, horizonEnd, todayStr, dailyBudget],
+  );
+
+  // Mapa data -> saldo: formato que as telas de calendário já consomem.
+  const dailyBalances = useMemo(
+    () => Object.fromEntries(projection.days.map((d) => [d.date, d.balance])),
+    [projection],
+  );
+
+  // Valor atual do atalho "gasto do dia", por data. É só o lançamento rápido e
+  // não a soma de todos os diários, para o campo refletir o que ele mesmo grava.
+  const quickDailyByDate = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const t of transactions) {
+      if (t.type === 'diario' && t.description === QUICK_DAILY_DESCRIPTION) map[t.date] = t.value;
     }
-    return dates;
-  };
-
-  const datesList = getDatesInRange();
-
-  const calculateDailyBalances = () => {
-    const balances: Record<string, number> = {};
-    let running = initialBalance;
-    
-    datesList.forEach((dateStr) => {
-      // 1. Specific scheduled transactions on this day
-      const dayTransactions = transactions.filter((t) => t.date === dateStr);
-      const dayEntradas = dayTransactions.filter(t => t.type === 'entrada').reduce((sum, t) => sum + t.value, 0);
-      const daySaidas = dayTransactions.filter(t => t.type !== 'entrada').reduce((sum, t) => sum + t.value, 0);
-      
-      // 2. Daily spends (Real spend if past/today, Gasto Diário Base if future)
-      let spend = 0;
-      if (dateStr <= todayStr) {
-        spend = realSpends[dateStr] ?? 0;
-      } else {
-        spend = dailyBaseSpend;
-      }
-      
-      running = running + dayEntradas - daySaidas - spend;
-      balances[dateStr] = running;
-    });
-    
-    return balances;
-  };
-
-  const dailyBalances = calculateDailyBalances();
+    return map;
+  }, [transactions]);
 
   // Dados financeiros agora vivem no Firestore por usuário, então o app
   // inteiro exige login antes de mostrar qualquer tela.
@@ -514,7 +622,7 @@ function App() {
             onAddTransactionClick={openNewTransactionModal}
             dailyBalances={dailyBalances}
             theme={theme}
-            dailyBaseSpend={dailyBaseSpend}
+            dailyBudget={dailyBudget}
             onGoToPlanning={() => setActiveTab('configuracoes')}
           />
         )}
@@ -549,6 +657,12 @@ function App() {
             setInitialBalance={persistBalance}
             planningConfig={planningConfig}
             setPlanningConfig={persistPlanningConfig}
+            cards={cards}
+            onSaveCard={handleSaveCard}
+            onDeleteCard={handleDeleteCard}
+            budgetConfig={budgetConfig}
+            setBudgetConfig={persistBudgetConfig}
+            dailyBudget={dailyBudget}
           />
         )}
 
@@ -656,9 +770,10 @@ function App() {
             tags={tags}
             editingTransaction={editingTransaction}
             defaultDate={modalDefaultDate}
-            dailyBaseSpend={dailyBaseSpend}
-            realSpends={realSpends}
-            onUpdateRealSpend={handleUpdateRealSpend}
+            dailyBudget={dailyBudget}
+            cards={cards}
+            quickDailyByDate={quickDailyByDate}
+            onSetDailySpend={handleSetDailySpend}
           />
         )}
       </AnimatePresence>
