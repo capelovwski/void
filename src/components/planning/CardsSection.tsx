@@ -11,7 +11,15 @@ interface CardsSectionProps {
 
 const CARD_COLORS = ['#8A05BE', '#EC7000', '#00A868', '#1A1A1A', '#005CA9', '#E31C79'];
 
-const emptyDraft = { id: undefined as string | undefined, name: '', closingDay: '28', dueDay: '5', color: CARD_COLORS[0] };
+interface Draft {
+  id?: string;
+  name: string;
+  closingDay: string;
+  dueDay: string;
+  color: string;
+}
+
+const emptyDraft: Draft = { id: undefined, name: '', closingDay: '28', dueDay: '5', color: CARD_COLORS[0] };
 
 const field =
   'w-full px-3 py-2.5 rounded-xl border border-neutral-03 bg-neutral-01 text-sm text-neutral-11 focus:outline-none focus:border-neutral-11 transition-colors';
@@ -22,12 +30,12 @@ const field =
  * cai, e o de vencimento define quando o valor sai do saldo.
  */
 export const CardsSection: React.FC<CardsSectionProps> = ({ cards, onSaveCard, onDeleteCard }) => {
-  const [draft, setDraft] = useState(emptyDraft);
+  const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState('');
-  const isEditing = draft.id !== undefined;
+  const isEditing = draft?.id !== undefined;
 
-  const closingDay = Number(draft.closingDay);
-  const dueDay = Number(draft.dueDay);
+  const closingDay = Number(draft?.closingDay);
+  const dueDay = Number(draft?.dueDay);
   const daysAreValid =
     Number.isFinite(closingDay) && closingDay >= 1 && closingDay <= 31 &&
     Number.isFinite(dueDay) && dueDay >= 1 && dueDay <= 31;
@@ -36,13 +44,14 @@ export const CardsSection: React.FC<CardsSectionProps> = ({ cards, onSaveCard, o
   const todayStr = todayYMD();
   const preview = daysAreValid ? invoiceDueDate(todayStr, { closingDay, dueDay }) : null;
 
-  const resetDraft = () => {
-    setDraft(emptyDraft);
+  const closeDraft = () => {
+    setDraft(null);
     setError('');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!draft) return;
 
     if (!draft.name.trim()) {
       setError('Dê um nome ao cartão.');
@@ -62,7 +71,7 @@ export const CardsSection: React.FC<CardsSectionProps> = ({ cards, onSaveCard, o
     });
 
     onSaveCard(draft.id ? normalized : { name: normalized.name, closingDay: normalized.closingDay, dueDay: normalized.dueDay, color: normalized.color });
-    resetDraft();
+    closeDraft();
   };
 
   const startEdit = (card: Card) => {
@@ -77,10 +86,26 @@ export const CardsSection: React.FC<CardsSectionProps> = ({ cards, onSaveCard, o
   };
 
   return (
-    <div className="card-premium p-6 space-y-5">
-      <div className="flex items-center gap-2 text-neutral-11 border-b border-neutral-02 pb-3">
-        <CreditCard size={18} className="text-neutral-08" />
-        <h3 className="text-base font-bold font-albert-sans">Cartões de crédito</h3>
+    <div className="card-premium p-5 space-y-4">
+      <div className="flex items-center justify-between gap-3 border-b border-neutral-02 pb-3">
+        <div className="flex items-center gap-2 text-neutral-11">
+          <CreditCard size={18} className="text-neutral-08" />
+          <h3 className="text-base font-bold font-albert-sans">
+            Cartões de crédito
+            {cards.length > 0 && <span className="ml-2 text-xs font-normal text-neutral-08">{cards.length}</span>}
+          </h3>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setDraft({ ...emptyDraft });
+            setError('');
+          }}
+          className="btn-filled px-3 py-2 text-xs rounded-xl flex-shrink-0"
+        >
+          <Plus size={14} />
+          Novo
+        </button>
       </div>
 
       {cards.length === 0 ? (
@@ -134,21 +159,20 @@ export const CardsSection: React.FC<CardsSectionProps> = ({ cards, onSaveCard, o
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-3 pt-1 border-t border-neutral-02">
-        <div className="flex items-center justify-between pt-3">
+      {draft && (
+      <form onSubmit={handleSubmit} className="rounded-2xl border border-neutral-03 bg-neutral-01/50 p-4 space-y-3">
+        <div className="flex items-center justify-between">
           <span className="text-xs font-bold text-neutral-10 uppercase tracking-wide">
             {isEditing ? 'Editar cartão' : 'Novo cartão'}
           </span>
-          {isEditing && (
-            <button
-              type="button"
-              onClick={resetDraft}
-              className="flex items-center gap-1 text-[10px] font-semibold text-neutral-08 hover:text-neutral-11 transition-colors"
-            >
-              <X size={11} />
-              Cancelar
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={closeDraft}
+            className="p-1 rounded-lg text-neutral-08 hover:text-neutral-11 hover:bg-neutral-02 transition-colors"
+            aria-label="Cancelar"
+          >
+            <X size={14} />
+          </button>
         </div>
 
         <input
@@ -212,11 +236,11 @@ export const CardsSection: React.FC<CardsSectionProps> = ({ cards, onSaveCard, o
 
         {error && <p className="text-[11px] font-medium text-rose-600 dark:text-rose-400">{error}</p>}
 
-        <button type="submit" className="btn-filled w-full py-2.5 text-xs rounded-xl">
-          <Plus size={14} />
+        <button type="submit" className="btn-filled-main w-full py-2.5 text-xs rounded-xl">
           {isEditing ? 'Salvar cartão' : 'Adicionar cartão'}
         </button>
       </form>
+      )}
     </div>
   );
 };

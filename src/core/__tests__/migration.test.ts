@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import type { Transaction } from '../../types';
+import type { Tag, Transaction } from '../../types';
 import {
   MIGRATED_BUDGET_CATEGORY_ID,
   SCHEMA_VERSION,
+  mergeBudgetCategoriesIntoTags,
   needsTransactionMigration,
   normalizeTransaction,
   planMigration,
-  planningConfigToBudget,
+  planningConfigToCategory,
   realSpendsToTransactions,
 } from '../migration';
 
@@ -58,9 +59,9 @@ describe('realSpends -> movimentações diárias', () => {
   });
 });
 
-describe('planejamento antigo -> orçamento por categorias', () => {
+describe('planejamento antigo -> categoria de orçamento', () => {
   it('preserva o que sobrava como uma única categoria', () => {
-    const budget = planningConfigToBudget({
+    const category = planningConfigToCategory({
       fixedRevenue: 5500,
       fixedExpenses: [
         { id: '1', name: 'Aluguel', value: 1500 },
@@ -68,18 +69,58 @@ describe('planejamento antigo -> orçamento por categorias', () => {
       ],
     });
 
-    expect(budget.daysDivisor).toBe(30);
-    expect(budget.categories).toHaveLength(1);
-    expect(budget.categories[0]).toMatchObject({ id: MIGRATED_BUDGET_CATEGORY_ID, monthlyValue: 3600 });
+    expect(category).toMatchObject({ id: MIGRATED_BUDGET_CATEGORY_ID, monthlyBudget: 3600 });
   });
 
   it('não cria categoria quando as despesas fixas comem a receita', () => {
-    const budget = planningConfigToBudget({ fixedRevenue: 1000, fixedExpenses: [{ id: '1', name: 'Aluguel', value: 1200 }] });
-    expect(budget.categories).toEqual([]);
+    expect(planningConfigToCategory({ fixedRevenue: 1000, fixedExpenses: [{ id: '1', name: 'Aluguel', value: 1200 }] })).toBeNull();
   });
 
   it('aguenta planejamento ausente', () => {
-    expect(planningConfigToBudget(undefined).categories).toEqual([]);
+    expect(planningConfigToCategory(undefined)).toBeNull();
+  });
+});
+
+describe('fusão das duas listas de categoria', () => {
+  const tags: Tag[] = [
+    { id: 'tag-a', name: 'Alimentação', color: '#EF4444', icon: 'utensils' },
+    { id: 'tag-b', name: 'Lazer', color: '#EC4899', icon: 'film' },
+  ];
+
+  it('casa por nome ignorando acento e caixa, preservando cor e ícone da tag', () => {
+    const { tagsToUpdate, tagsToCreate } = mergeBudgetCategoriesIntoTags(tags, [
+      { id: 'b1', name: 'alimentacao', monthlyValue: 900 },
+    ]);
+
+    expect(tagsToCreate).toEqual([]);
+    expect(tagsToUpdate).toHaveLength(1);
+    expect(tagsToUpdate[0]).toMatchObject({
+      id: 'tag-a', name: 'Alimentação', color: '#EF4444', icon: 'utensils', monthlyBudget: 900,
+    });
+  });
+
+  it('cria tag nova para a categoria de orçamento sem par', () => {
+    const { tagsToCreate } = mergeBudgetCategoriesIntoTags(tags, [
+      { id: 'b2', name: 'Transporte', monthlyValue: 500 },
+    ]);
+
+    expect(tagsToCreate).toHaveLength(1);
+    expect(tagsToCreate[0]).toMatchObject({ id: 'b2', name: 'Transporte', monthlyBudget: 500 });
+  });
+
+  it('não sobrescreve um orçamento já definido na tag', () => {
+    const comOrcamento: Tag[] = [{ ...tags[0], monthlyBudget: 1200 }];
+    const { tagsToUpdate } = mergeBudgetCategoriesIntoTags(comOrcamento, [
+      { id: 'b1', name: 'Alimentação', monthlyValue: 900 },
+    ]);
+
+    expect(tagsToUpdate).toEqual([]);
+  });
+
+  it('descarta categorias zeradas', () => {
+    const result = mergeBudgetCategoriesIntoTags(tags, [{ id: 'b3', name: 'Nada', monthlyValue: 0 }]);
+    expect(result.tagsToCreate).toEqual([]);
+    expect(result.tagsToUpdate).toEqual([]);
   });
 });
 
@@ -118,16 +159,33 @@ describe('planMigration', () => {
     expect(plan.isNoop).toBe(true);
     expect(plan.transactionsToUpdate).toEqual([]);
     expect(plan.transactionsToCreate).toEqual([]);
+    expect(plan.tagsToUpdate).toEqual([]);
+    expect(plan.tagsToCreate).toEqual([]);
   });
 
-  it('preserva um orçamento já configurado em vez de derivar do planejamento antigo', () => {
-    const existingBudget = { categories: [{ id: 'c', name: 'Comida', monthlyValue: 900 }], daysDivisor: 30 };
+  it('funde as categorias de orçamento nas tags em vez de derivar do planejamento antigo', () => {
     const plan = planMigration({
       transactions: [],
+      tags: [{ id: 'tag-a', name: 'Comida', color: '#EF4444', icon: 'utensils' }],
       planningConfig: { fixedRevenue: 5000, fixedExpenses: [] },
-      existingBudget,
+      existingBudget: { daysDivisor: 15, categories: [{ id: 'c', name: 'Comida', monthlyValue: 900 }] },
     });
 
-    expect(plan.budgetConfig).toBe(existingBudget);
+    expect(plan.tagsToUpdate).toHaveLength(1);
+    expect(plan.tagsToUpdate[0]).toMatchObject({ id: 'tag-a', monthlyBudget: 900 });
+    // Nada é semeado do planejamento antigo quando já existe orçamento.
+    expect(plan.tagsToCreate).toEqual([]);
+    expect(plan.budgetConfig.daysDivisor).toBe(15);
+  });
+
+  it('semeia a categoria do planejamento antigo só quando não há orçamento em lugar nenhum', () => {
+    const plan = planMigration({
+      transactions: [],
+      tags: [{ id: 'tag-a', name: 'Comida', color: '#EF4444' }],
+      planningConfig: { fixedRevenue: 5000, fixedExpenses: [{ id: '1', name: 'Aluguel', value: 1400 }] },
+    });
+
+    expect(plan.tagsToCreate).toHaveLength(1);
+    expect(plan.tagsToCreate[0]).toMatchObject({ id: MIGRATED_BUDGET_CATEGORY_ID, monthlyBudget: 3600 });
   });
 });

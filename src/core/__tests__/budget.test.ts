@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Occurrence, TransactionType } from '../../types';
-import { NO_TAG_ID, dailyBudgetFrom, monthMetrics, monthlyBudgetTotal, tagTotals } from '../budget';
+import type { Occurrence, Tag, TransactionType } from '../../types';
+import { NO_TAG_ID, budgetedCategories, dailyBudgetFrom, monthMetrics, monthlyBudgetTotal, tagTotals } from '../budget';
 import { projectBalances } from '../projection';
 
 const occ = (type: TransactionType, value: number, date: string, tagIds: string[] = []): Occurrence => ({
@@ -15,27 +15,29 @@ const occ = (type: TransactionType, value: number, date: string, tagIds: string[
 });
 
 describe('orçamento diário', () => {
-  it('soma as categorias e divide pelo divisor configurado', () => {
-    const config = {
-      categories: [
-        { id: '1', name: 'Alimentação', monthlyValue: 300 },
-        { id: '2', name: 'Transporte', monthlyValue: 500 },
-        { id: '3', name: 'Lazer', monthlyValue: 200 },
-      ],
-      daysDivisor: 30,
-    };
+  const cat = (name: string, monthlyBudget?: number): Tag => ({
+    id: name, name, color: '#000', monthlyBudget,
+  });
 
-    expect(monthlyBudgetTotal(config)).toBe(1000);
-    expect(dailyBudgetFrom(config)).toBe(33.33);
+  const categories = [cat('Alimentação', 300), cat('Transporte', 500), cat('Lazer', 200)];
+
+  it('soma o orçamento das categorias e divide pelo divisor configurado', () => {
+    expect(monthlyBudgetTotal(categories)).toBe(1000);
+    expect(dailyBudgetFrom(categories, { daysDivisor: 30 })).toBe(33.33);
+  });
+
+  it('ignora categorias que são só etiqueta, sem orçamento', () => {
+    const mixed = [...categories, cat('Presente'), cat('Casamento', 0)];
+    expect(monthlyBudgetTotal(mixed)).toBe(1000);
+    expect(budgetedCategories(mixed).map((c) => c.name)).toEqual(['Alimentação', 'Transporte', 'Lazer']);
   });
 
   it('cai no divisor 30 quando o configurado é inválido', () => {
-    const config = { categories: [{ id: '1', name: 'X', monthlyValue: 600 }], daysDivisor: 0 };
-    expect(dailyBudgetFrom(config)).toBe(20);
+    expect(dailyBudgetFrom([cat('X', 600)], { daysDivisor: 0 })).toBe(20);
   });
 
   it('devolve zero sem categorias', () => {
-    expect(dailyBudgetFrom({ categories: [], daysDivisor: 30 })).toBe(0);
+    expect(dailyBudgetFrom([], { daysDivisor: 30 })).toBe(0);
   });
 });
 

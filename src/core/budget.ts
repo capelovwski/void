@@ -1,10 +1,21 @@
-import type { BudgetConfig, Occurrence } from '../types';
+import type { BudgetConfig, Occurrence, Tag } from '../types';
 import { round2 } from './money';
 import type { DayProjection } from './projection';
 
-/** Soma das categorias de orçamento mensal. */
-export function monthlyBudgetTotal(config: BudgetConfig): number {
-  return round2(config.categories.reduce((sum, c) => sum + (c.monthlyValue || 0), 0));
+/**
+ * Soma o orçamento mensal das categorias.
+ *
+ * A fonte é a lista de categorias (`Tag.monthlyBudget`) — e só ela. Receita
+ * menos despesas fixas é outro número, que responde "quanto sobra da minha
+ * renda", não "quanto planejo gastar por dia".
+ */
+export function monthlyBudgetTotal(categories: Tag[]): number {
+  return round2(categories.reduce((sum, c) => sum + (c.monthlyBudget || 0), 0));
+}
+
+/** Categorias que de fato entram na previsão — as que têm orçamento definido. */
+export function budgetedCategories(categories: Tag[]): Tag[] {
+  return categories.filter((c) => (c.monthlyBudget ?? 0) > 0);
 }
 
 /**
@@ -13,9 +24,9 @@ export function monthlyBudgetTotal(config: BudgetConfig): number {
  * O divisor é configurável (o padrão é 30) em vez de usar os dias do mês
  * corrente, para que a meta não oscile de fevereiro para março.
  */
-export function dailyBudgetFrom(config: BudgetConfig): number {
+export function dailyBudgetFrom(categories: Tag[], config: BudgetConfig): number {
   const divisor = config.daysDivisor > 0 ? config.daysDivisor : 30;
-  return round2(monthlyBudgetTotal(config) / divisor);
+  return round2(monthlyBudgetTotal(categories) / divisor);
 }
 
 export interface MonthMetrics {

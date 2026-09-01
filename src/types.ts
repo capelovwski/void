@@ -29,11 +29,22 @@ export interface Card {
   color?: string;
 }
 
+/**
+ * Categoria única do app: serve tanto para etiquetar movimentações quanto para
+ * planejar o gasto mensal. Antes eram dois modelos com nomes iguais — `Tag` e
+ * `BudgetCategory` — e o usuário precisava cadastrar "Alimentação" duas vezes.
+ */
 export interface Tag {
   id: string;
   name: string;
   color: string; // hex
   icon?: string; // chave em CATEGORY_ICONS
+
+  /**
+   * Quanto se espera gastar por mês nesta categoria. Ausente ou 0 significa
+   * que ela não entra na previsão de diário — é só uma etiqueta.
+   */
+  monthlyBudget?: number;
 }
 
 export interface Transaction {
@@ -91,19 +102,24 @@ export interface Occurrence {
   virtual: boolean;
 }
 
-/** Categoria de orçamento mensal usada para derivar o gasto diário sugerido. */
+export interface BudgetConfig {
+  /** Divisor de dias para o gasto diário sugerido (o app de referência usa 30). */
+  daysDivisor: number;
+
+  /**
+   * Lista antiga de categorias de orçamento, hoje fundida em `Tag.monthlyBudget`.
+   * Mantida só para a migração do schema 2 conseguir ler o que já foi gravado.
+   */
+  categories?: BudgetCategory[];
+}
+
+/** @deprecated Fundida em `Tag`. Só existe para ler dados do schema 2. */
 export interface BudgetCategory {
   id: string;
   name: string;
   monthlyValue: number;
   color?: string;
   icon?: string;
-}
-
-export interface BudgetConfig {
-  categories: BudgetCategory[];
-  /** Divisor de dias para o gasto diário sugerido (o app de referência usa 30). */
-  daysDivisor: number;
 }
 
 export interface Bank {

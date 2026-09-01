@@ -8,8 +8,8 @@ import {
   buildProjection,
   dailyBudgetFrom,
   endOfMonthYMD,
+  DEFAULT_DAYS_DIVISOR,
   planMigration,
-  planningConfigToBudget,
   round2,
   startOfMonthYMD,
   todayYMD,
@@ -121,10 +121,11 @@ function App() {
   const initialBalance = settings?.initialBalance ?? 0;
   const planningConfig: PlanningConfig = settings?.planningConfig ?? { fixedRevenue: 0, fixedExpenses: [] };
 
-  // Contas antigas ainda não têm `budgetConfig` gravado — até a migração rodar,
-  // o orçamento é derivado do planejamento antigo para o número não zerar.
-  const budgetConfig: BudgetConfig = settings?.budgetConfig ?? planningConfigToBudget(planningConfig);
-  const dailyBudget = dailyBudgetFrom(budgetConfig);
+  // O gasto diário tem uma fonte só: o orçamento mensal das categorias dividido
+  // pelo divisor de dias. Receita menos despesas fixas é outro número — quanto
+  // sobra da renda — e não alimenta esta conta.
+  const budgetConfig: BudgetConfig = { daysDivisor: settings?.budgetConfig?.daysDivisor || DEFAULT_DAYS_DIVISOR };
+  const dailyBudget = dailyBudgetFrom(tags, budgetConfig);
 
   const persistBanks = async (newBanks: Bank[]) => {
     const newIds = new Set(newBanks.map((b) => b.id));
@@ -183,7 +184,7 @@ function App() {
           initialBalance: 0,
           planningConfig: { fixedRevenue: 0, fixedExpenses: [] },
           realSpends: {},
-          budgetConfig: { categories: [], daysDivisor: 30 },
+          budgetConfig: { daysDivisor: DEFAULT_DAYS_DIVISOR },
           schemaVersion: SCHEMA_VERSION,
         });
       }
@@ -204,6 +205,7 @@ function App() {
     (async () => {
       const plan = planMigration({
         transactions,
+        tags,
         realSpends: settings.realSpends,
         planningConfig: settings.planningConfig,
         existingBudget: settings.budgetConfig,
@@ -214,12 +216,14 @@ function App() {
       await Promise.all([
         ...plan.transactionsToUpdate.map((t) => setTransactionDoc(t)),
         ...plan.transactionsToCreate.map((t) => setTransactionDoc(t)),
+        ...plan.tagsToUpdate.map((t) => setTagDoc(t)),
+        ...plan.tagsToCreate.map((t) => setTagDoc(t)),
       ]);
       // `realSpends` continua gravado como histórico — a cópia para `diario` é
       // idempotente, então nada se perde se a migração for interrompida no meio.
       await updateSettings({ budgetConfig: plan.budgetConfig, schemaVersion: plan.schemaVersion });
     })();
-  }, [userId, financeDataLoading, settings, transactions]);
+  }, [userId, financeDataLoading, settings, transactions, tags]);
 
   // 5. State Persistence Helpers
   const persistBalance = async (newBalance: number) => {
@@ -294,8 +298,12 @@ function App() {
     }
   };
 
-  const handleAddTag = async (tagData: Omit<Tag, 'id'>) => {
-    await addTagDoc(tagData);
+  const handleSaveTag = async (tagData: Omit<Tag, 'id'> & { id?: string }) => {
+    if (tagData.id) {
+      await setTagDoc(tagData as Tag);
+    } else {
+      await addTagDoc(tagData);
+    }
   };
 
   const handleSaveCard = async (cardData: Omit<Card, 'id'> & { id?: string }) => {
@@ -651,7 +659,7 @@ function App() {
           <PlanejamentoTab
             transactions={transactions}
             tags={tags}
-            onAddTag={handleAddTag}
+            onSaveTag={handleSaveTag}
             onDeleteTag={handleDeleteTag}
             initialBalance={initialBalance}
             setInitialBalance={persistBalance}
@@ -662,7 +670,6 @@ function App() {
             onDeleteCard={handleDeleteCard}
             budgetConfig={budgetConfig}
             setBudgetConfig={persistBudgetConfig}
-            dailyBudget={dailyBudget}
           />
         )}
 
