@@ -13,6 +13,12 @@ export interface FinanceSettings {
   schemaVersion?: number;
 
   /**
+   * true depois que o usuário passou (ou pulou) as perguntas iniciais. Impede
+   * que o assistente reapareça toda vez que a conta ficar sem configuração.
+   */
+  onboardingDone?: boolean;
+
+  /**
    * Campos do modelo antigo, mantidos após a migração.
    * `planningConfig` ainda guarda receita e despesas fixas — que não são gasto
    * do dia a dia e por isso não viraram categorias de orçamento. `realSpends`

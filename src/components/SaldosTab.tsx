@@ -12,7 +12,7 @@ interface SaldosTabProps {
   dailyBalances: Record<string, number>;
   theme: 'dark' | 'light';
   dailyBudget: number;
-  onGoToPlanning: () => void;
+  onStartSetup: () => void;
 }
 
 /** 0 = mês atual. O app só projeta a partir de hoje, então não dá para voltar antes disso. */
@@ -35,7 +35,7 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
   dailyBalances,
   theme,
   dailyBudget,
-  onGoToPlanning,
+  onStartSetup,
 }) => {
   const todayStr = todayYMD();
   const isMobile = useIsMobile();
@@ -104,21 +104,31 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
         </div>
       </div>
 
-      {/* Sem categorias com orçamento o gasto diário é zero, e a projeção fica
-          "parada" nos dias futuros — o que parece um bug. Avisa e leva direto
-          para onde se configura. */}
+      {/* Sem gasto diário o saldo não se move nos dias futuros e a tela vira uma
+          coluna de valores repetidos. O aviso antigo explicava onde clicar —
+          "Previsão de diário, dentro de Planejamento" — e mandava o usuário
+          caçar duas telas. Agora ele resolve no próprio lugar. */}
       {dailyBudget === 0 && (
-        <button
-          onClick={onGoToPlanning}
-          className="mb-4 flex w-full items-start gap-2 rounded-xl border border-main/25 bg-main/10 p-3 text-left transition-colors hover:bg-main/15 tablet:mb-6"
-        >
-          <CircleAlert size={14} className="mt-0.5 flex-shrink-0 text-main" />
-          <span className="text-[11px] leading-relaxed text-neutral-10">
-            <strong className="text-neutral-11">Gasto diário zerado.</strong> Cadastre suas
-            categorias em <strong className="text-neutral-11">Previsão de diário</strong>, dentro de
-            Planejamento, para o saldo projetar os dias futuros.
-          </span>
-        </button>
+        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-main/25 bg-main/10 p-4 tablet:mb-6 tablet:flex-row tablet:items-center tablet:justify-between">
+          <div className="flex items-start gap-2.5">
+            <CircleAlert size={16} className="mt-0.5 flex-shrink-0 text-main" />
+            <div className="space-y-0.5">
+              <p className="text-[13px] font-semibold text-neutral-11">
+                Falta dizer quanto você gasta por dia
+              </p>
+              <p className="text-[12px] leading-relaxed text-neutral-08">
+                Sem isso o app não consegue prever como seu saldo fica nos próximos meses.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={onStartSetup}
+            className="flex-shrink-0 rounded-xl bg-main px-4 py-2.5 text-xs font-semibold text-zinc-950 transition-all hover:brightness-95 active:scale-[0.98]"
+          >
+            Configurar agora
+          </button>
+        </div>
       )}
 
       {isMobile ? (

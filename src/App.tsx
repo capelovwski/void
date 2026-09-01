@@ -28,6 +28,7 @@ import { PerfilTab } from './components/PerfilTab';
 import { ParticleBackground } from './components/ParticleBackground';
 import { TransactionModal } from './components/TransactionModal';
 import { AuthScreen } from './components/auth/AuthScreen';
+import { SetupWizard, type SetupAnswers } from './components/onboarding/SetupWizard';
 
 import voidDarkModeLogo from '../logo/void-dark-mode.svg';
 import voidLightModeLogo from '../logo/void-light-mode.svg';
@@ -62,6 +63,9 @@ const ISLAND_LABEL_SPRING = { type: 'spring', stiffness: 420, damping: 30, mass:
  * o mesmo documento em vez de criar um novo a cada digitação.
  */
 const QUICK_DAILY_DESCRIPTION = 'Gasto do dia';
+
+/** Categoria criada pelo assistente inicial a partir do "quanto quer gastar por dia". */
+const SETUP_CATEGORY_ID = 'setup-gasto-diario';
 
 interface AppNotification {
   id: string;
@@ -158,6 +162,7 @@ function App() {
 
   // 4. Modal Toggles
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showSetup, setShowSetup] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [modalDefaultDate, setModalDefaultDate] = useState<string>('');
 
@@ -346,6 +351,38 @@ function App() {
     await updateSettings({ budgetConfig: config });
   };
 
+  /**
+   * Grava as três respostas iniciais de uma vez.
+   *
+   * O gasto por dia é convertido em uma categoria de orçamento, porque é dali
+   * que o app tira o gasto diário — assim a projeção já funciona ao fechar o
+   * assistente, sem passar por nenhuma tela de configuração.
+   */
+  const handleFinishSetup = async (answers: SetupAnswers) => {
+    setShowSetup(false);
+
+    if (answers.dailySpend > 0) {
+      await setTagDoc({
+        id: SETUP_CATEGORY_ID,
+        name: 'Gasto do dia a dia',
+        color: '#6B7280',
+        icon: 'shopping',
+        monthlyBudget: round2(answers.dailySpend * budgetConfig.daysDivisor),
+      });
+    }
+
+    await updateSettings({
+      initialBalance: answers.initialBalance,
+      planningConfig: { ...planningConfig, fixedRevenue: answers.monthlyIncome },
+      onboardingDone: true,
+    });
+  };
+
+  const handleSkipSetup = async () => {
+    setShowSetup(false);
+    await updateSettings({ onboardingDone: true });
+  };
+
   const handleDeleteTag = async (tagId: string) => {
     await removeTagDoc(tagId);
 
@@ -456,6 +493,19 @@ function App() {
       }),
     [transactions, initialBalance, horizonStart, horizonEnd, todayStr, dailyBudget],
   );
+
+  /**
+   * Conta sem nenhum dos três números que fazem o app funcionar. Nesse estado a
+   * tela inicial seria uma parede de "R$ 0", então o assistente abre sozinho.
+   * É derivado, não um efeito: assim que as respostas são gravadas a condição
+   * deixa de valer e a tela some, sem estado intermediário para sincronizar.
+   */
+  const needsSetup =
+    !!settings &&
+    !settings.onboardingDone &&
+    initialBalance === 0 &&
+    dailyBudget === 0 &&
+    planningConfig.fixedRevenue === 0;
 
   // Mapa data -> saldo: formato que as telas de calendário já consomem.
   const dailyBalances = useMemo(
@@ -710,7 +760,7 @@ function App() {
             dailyBalances={dailyBalances}
             theme={theme}
             dailyBudget={dailyBudget}
-            onGoToPlanning={() => setActiveTab('configuracoes')}
+            onStartSetup={() => setShowSetup(true)}
           />
         )}
 
@@ -789,6 +839,14 @@ function App() {
         </motion.div>
       </nav>
       </div>
+
+      {/* Perguntas iniciais: abrem sozinhas numa conta sem configuração e podem
+          ser reabertas pelo aviso da tela de Saldos. */}
+      <AnimatePresence>
+        {(showSetup || needsSetup) && (
+          <SetupWizard onFinish={handleFinishSetup} onSkip={handleSkipSetup} />
+        )}
+      </AnimatePresence>
 
       {/* Transaction Entry/Edit Modal */}
       <AnimatePresence>
