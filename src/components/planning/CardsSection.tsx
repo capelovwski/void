@@ -114,7 +114,7 @@ export const CardsSection: React.FC<CardsSectionProps> = ({ cards, onSaveCard, o
           cai e descontar o valor só no vencimento.
         </p>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2 max-h-[16rem] overflow-y-auto pr-1 scroll-fade-mask">
           {cards.map((card) => (
             <div
               key={card.id}

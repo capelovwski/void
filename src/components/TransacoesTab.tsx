@@ -259,77 +259,81 @@ export const TransacoesTab: React.FC<TransacoesTabProps> = ({
               const iconInfo = getIconClass(t.type);
 
               return (
+                /* Duas linhas dentro de um bloco só: descrição + valor em cima,
+                   data/tag + ações embaixo. Cabe em 375px com o texto maior e
+                   continua alinhado no desktop, sem markup duplicado. */
                 <div
                   key={t.id}
-                  className="card-premium p-4 flex items-center justify-between gap-4 hover:border-neutral-06 hover:shadow-md transition-all group"
+                  className="card-premium p-4 flex items-center gap-3 hover:border-neutral-06 hover:shadow-md transition-all group"
                 >
-                  <div className="flex items-center gap-4 min-w-0">
-                    <div className={`p-2.5 rounded-xl border border-neutral-02 bg-neutral-00 ${iconInfo?.bg}`}>
-                      {iconInfo?.icon}
-                    </div>
+                  <div className={`p-2.5 rounded-xl border border-neutral-02 bg-neutral-00 flex-shrink-0 ${iconInfo?.bg}`}>
+                    {iconInfo?.icon}
+                  </div>
 
-                    <div className="min-w-0">
-                      <h4 className="text-sm font-semibold text-neutral-11 truncate max-w-[200px] tablet:max-w-md">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <h4 className="text-sm font-semibold text-neutral-11 truncate">
                         {t.description}
                       </h4>
-                      <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                        <span className="text-[10px] text-neutral-08 font-medium flex items-center gap-1">
+
+                      <div className="text-right whitespace-nowrap flex-shrink-0">
+                        <div className={`text-base font-bold font-albert-sans ${
+                          t.type === 'entrada'
+                            ? 'text-success'
+                            : t.type === 'economia'
+                            ? 'text-violet-500 dark:text-violet-400'
+                            : 'text-neutral-11'
+                        }`}>
+                          {t.type === 'entrada' ? '+' : '-'} R$ {t.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </div>
+                        <span className="text-[10px] text-neutral-08 font-semibold">
+                          {iconInfo.label}
+                          {t.installmentCount ? ` · ${t.installmentCount}x` : ''}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 mt-1.5">
+                      <div className="flex flex-wrap items-center gap-2 min-w-0">
+                        <span className="text-[10px] text-neutral-08 font-medium flex items-center gap-1 whitespace-nowrap">
                           <Calendar size={10} />
                           {formatDate(t.date)}
                         </span>
                         {tag && (
                           <span
-                            className="text-[10px] px-2 py-0.5 rounded-full font-medium border flex items-center gap-1.5"
+                            className="text-[10px] px-2 py-0.5 rounded-full font-medium border flex items-center gap-1.5 max-w-[9rem] truncate"
                             style={{ borderColor: tag.color + '40', backgroundColor: tag.color + '10', color: tag.color }}
                           >
                             {(() => {
                               const IconComponent = categoryIcon(tag.icon);
-                              return <IconComponent size={10} />;
+                              return <IconComponent size={10} className="flex-shrink-0" />;
                             })()}
                             {tag.name}
                           </span>
                         )}
                       </div>
-                    </div>
-                  </div>
 
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <div className={`text-base font-bold font-albert-sans ${
-                        t.type === 'entrada'
-                          ? 'text-success'
-                          : t.type === 'economia'
-                          ? 'text-violet-500 dark:text-violet-400'
-                          : 'text-neutral-11'
-                      }`}>
-                        {t.type === 'entrada' ? '+' : '-'} R$ {t.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      {/* Actions: Edit & Delete */}
+                      <div className="flex gap-1.5 opacity-80 tablet:opacity-0 group-hover:opacity-100 transition-opacity items-center flex-shrink-0">
+                        <button
+                          onClick={() => onEditTransaction(t)}
+                          title="Editar"
+                          className="w-11 h-11 tablet:w-9 tablet:h-9 flex items-center justify-center rounded-xl text-neutral-09 hover:bg-neutral-02 hover:text-neutral-11 transition-all"
+                        >
+                          <Edit3 size={16} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm('Tem certeza que deseja excluir esta transação?')) {
+                              onDeleteTransaction(t.id);
+                            }
+                          }}
+                          title="Excluir"
+                          className="w-11 h-11 tablet:w-9 tablet:h-9 flex items-center justify-center rounded-xl text-red-500/80 dark:text-red-400/80 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 transition-all"
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </div>
-                      <span className="text-[10px] text-neutral-08 font-semibold">
-                        {iconInfo.label}
-                        {t.installmentCount ? ` · ${t.installmentCount}x` : ''}
-                      </span>
-                    </div>
-
-                    {/* Actions: Edit & Delete */}
-                    <div className="flex gap-1.5 opacity-80 tablet:opacity-0 group-hover:opacity-100 transition-opacity items-center">
-                      <button
-                        onClick={() => onEditTransaction(t)}
-                        title="Editar"
-                        className="w-11 h-11 tablet:w-9 tablet:h-9 flex items-center justify-center rounded-xl text-neutral-09 hover:bg-neutral-02 hover:text-neutral-11 transition-all"
-                      >
-                        <Edit3 size={16} />
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm('Tem certeza que deseja excluir esta transação?')) {
-                            onDeleteTransaction(t.id);
-                          }
-                        }}
-                        title="Excluir"
-                        className="w-11 h-11 tablet:w-9 tablet:h-9 flex items-center justify-center rounded-xl text-red-500/80 dark:text-red-400/80 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 transition-all"
-                      >
-                        <Trash2 size={16} />
-                      </button>
                     </div>
                   </div>
                 </div>

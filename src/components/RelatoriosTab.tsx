@@ -684,7 +684,9 @@ export const RelatoriosTab: React.FC<RelatoriosTabProps> = ({
           className="btn-outline px-3 py-2 text-[10px] font-semibold flex items-center gap-1.5"
         >
           <SlidersHorizontal size={12} />
-          <span>Ativar / Desativar Widgets</span>
+          {/* Com o texto maior o rótulo cheio quebrava em três linhas no mobile. */}
+          <span className="tablet:hidden">Widgets</span>
+          <span className="hidden tablet:inline">Ativar / Desativar Widgets</span>
         </button>
       </div>
 

@@ -86,9 +86,12 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
 
       {/* Header: título + paginador de mês (mês atual e os 2 seguintes) */}
       <div className="flex items-center justify-between gap-4">
-        <h2 className="text-base font-bold font-albert-sans text-neutral-11 flex items-center gap-2">
-          <CalendarIcon size={18} className="text-neutral-08" />
-          Horizonte de Eventos
+        <h2 className="text-base font-bold font-albert-sans text-neutral-11 flex items-center gap-2 min-w-0">
+          <CalendarIcon size={18} className="text-neutral-08 flex-shrink-0" />
+          {/* No mobile o paginador come o espaço; truncar daria "Horizonte de E...",
+              então o título encurta de propósito. */}
+          <span className="tablet:hidden">Horizonte</span>
+          <span className="hidden tablet:inline">Horizonte de Eventos</span>
         </h2>
 
         <div className="flex items-center gap-1 bg-neutral-01 p-1 rounded-xl border border-neutral-03/80">
@@ -101,7 +104,7 @@ export const SaldosTab: React.FC<SaldosTabProps> = ({
           >
             <ChevronLeft size={16} />
           </button>
-          <span className="px-2 text-xs font-bold text-neutral-11 min-w-[104px] text-center tabular-nums">
+          <span className="px-2 text-xs font-bold text-neutral-11 text-center tabular-nums whitespace-nowrap tablet:min-w-[104px]">
             {monthLabel}
           </span>
           <button

@@ -48,8 +48,13 @@ export const KpiCard: React.FC<KpiCardProps> = ({
 
   return (
     <div className="card-premium p-4 flex flex-col justify-between gap-4">
-      <div className="flex items-center justify-between gap-2 text-neutral-08">
-        <span className="text-[11px] font-semibold uppercase tracking-wider truncate">{label}</span>
+      <div className="flex items-start justify-between gap-2 text-neutral-08">
+        {/* No mobile o rótulo cresce e não cabe numa linha só; deixar quebrar é
+            melhor do que truncar "Orçamento disponível" em "Orçamen...". As
+            células da grade têm altura igual, então o card vizinho acompanha. */}
+        <span className="text-[11px] font-semibold uppercase tracking-wide leading-tight tablet:truncate">
+          {label}
+        </span>
         <div className={`p-1.5 rounded-lg flex-shrink-0 ${tone.chip}`}>
           <Icon size={15} />
         </div>

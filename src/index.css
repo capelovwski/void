@@ -304,19 +304,45 @@ h6 { font-size: 16px; }
     overscroll-behavior-y: contain;
     -webkit-overflow-scrolling: touch;
   }
+}
 
-  /* General typography scale down for mobile readability */
-  h1 { font-size: 24px; }
-  h2 { font-size: 20px; }
-  h3 { font-size: 18px; }
-  h4 { font-size: 16px; }
-  h5 { font-size: 14px; }
-  h6 { font-size: 12px; }
-  
+/* Tipografia mobile.
+ *
+ * As telas densas foram escritas com tamanhos fixos bem pequenos (8 a 11px),
+ * que no celular ficam ilegíveis. Em vez de espalhar variantes `tablet:` por
+ * centenas de classes nos componentes, os utilitários são reescalados aqui —
+ * o mapeamento é o mesmo em todo o app e fica num lugar só.
+ *
+ * O corte usa 809px para casar com o breakpoint `tablet` (810px) do resto do
+ * app: o texto cresce exatamente onde o layout também vira mobile.
+ *
+ * Estas regras ficam fora de `@layer`, então vencem os utilitários do Tailwind
+ * (que são "layered") sem precisar de !important.
+ */
+@media (max-width: 809px) {
   body {
-    font-size: 14px;
-    line-height: 1.3em;
+    font-size: 15px;
+    line-height: 1.45em;
   }
+
+  h1 { font-size: 26px; }
+  h2 { font-size: 22px; }
+  h3 { font-size: 19px; }
+  h4 { font-size: 17px; }
+  h5 { font-size: 15px; }
+  h6 { font-size: 14px; }
+
+  .text-\[8px\] { font-size: 10px; }
+  .text-\[9px\] { font-size: 11px; }
+  .text-\[9\.5px\] { font-size: 11px; }
+  .text-\[10px\] { font-size: 12px; }
+  .text-\[11px\] { font-size: 13px; }
+  .text-\[13px\] { font-size: 14px; }
+
+  .text-xs { font-size: 13px; line-height: 1.4; }
+  .text-sm { font-size: 15px; line-height: 1.45; }
+  .text-base { font-size: 16px; }
+  .text-lg { font-size: 18px; }
 }
 
 /* Component utilities */

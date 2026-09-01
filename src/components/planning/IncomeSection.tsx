@@ -178,7 +178,7 @@ export const IncomeSection: React.FC<IncomeSectionProps> = ({
             Nenhuma despesa fixa cadastrada.
           </p>
         ) : (
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 max-h-[16rem] overflow-y-auto pr-1 scroll-fade-mask">
             {planningConfig.fixedExpenses.map((expense) => (
               <div
                 key={expense.id}

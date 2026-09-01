@@ -155,15 +155,15 @@ export const CategoriesSection: React.FC<CategoriesSectionProps> = ({
       </div>
 
       <div className="card-premium p-5 space-y-4">
-        <div className="flex items-center justify-between gap-3 border-b border-neutral-02 pb-3">
+        <div className="flex flex-col tablet:flex-row tablet:items-center justify-between gap-3 border-b border-neutral-02 pb-3">
           <h3 className="text-base font-bold font-albert-sans text-neutral-11">
             Categorias
             <span className="ml-2 text-xs font-normal text-neutral-08">{tags.length}</span>
           </h3>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full tablet:w-auto">
             {tags.length > 6 && (
-              <div className="relative">
+              <div className="relative flex-1 tablet:flex-none">
                 <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-08 pointer-events-none">
                   <Search size={14} />
                 </span>
@@ -172,7 +172,7 @@ export const CategoriesSection: React.FC<CategoriesSectionProps> = ({
                   placeholder="Buscar..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-36 pl-8 pr-3 py-2 rounded-xl border border-neutral-03 bg-neutral-01 text-xs text-neutral-11 focus:outline-none focus:border-neutral-11"
+                  className="w-full tablet:w-36 pl-8 pr-3 py-2 rounded-xl border border-neutral-03 bg-neutral-01 text-xs text-neutral-11 focus:outline-none focus:border-neutral-11"
                 />
               </div>
             )}
@@ -299,7 +299,7 @@ export const CategoriesSection: React.FC<CategoriesSectionProps> = ({
             espera gastar nela por mês.
           </p>
         ) : (
-          <div className="grid grid-cols-1 tablet:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 tablet:grid-cols-2 gap-2 max-h-[19rem] overflow-y-auto pr-1 scroll-fade-mask">
             {filtered.map((tag) => {
               const Icon = categoryIcon(tag.icon);
               const budgeted = (tag.monthlyBudget ?? 0) > 0;
